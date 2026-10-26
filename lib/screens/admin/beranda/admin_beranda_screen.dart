@@ -21,6 +21,7 @@ import '../../../theme/app_text_styles.dart';
 import '../../../widgets/activity_timeline.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/app_logo.dart';
+import '../../../widgets/kotak_peringatan.dart';
 import '../../../widgets/logout_button.dart';
 import '../../../widgets/menu_card.dart';
 import '../../../widgets/offline_badge.dart';
@@ -28,6 +29,7 @@ import '../../../widgets/square_icon_button.dart';
 import '../../../widgets/stat_card.dart';
 import '../../../widgets/status_bantuan_widgets.dart';
 import '../../../widgets/theme_toggle_button.dart';
+import '../../dashboard/dashboard_screen.dart';
 import '../../ringkasan/ringkasan_posko_screen.dart';
 import '../data/admin_data_menu_screen.dart';
 
@@ -209,7 +211,20 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          MenuCard(
+            icon: Icons.insights_rounded,
+            iconColor: AppColors.accentBlue,
+            title: 'DASHBOARD GRAFIK',
+            description: 'Komposisi pengungsi, keterisian posko, tren & stok',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const DashboardScreen()),
+            ),
+          ),
           const SizedBox(height: 24),
+
+          // ---- Peringatan: posko hampir/sudah penuh, stok < 7 hari ----
+          const KotakPeringatan(jarakBawah: 24),
 
           // ---- Posko butuh bantuan (posko beroperasi, paling mendesak dulu) ----
           if (_poskoBeroperasi.isNotEmpty) ...[

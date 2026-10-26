@@ -17,12 +17,14 @@ import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/app_logo.dart';
+import '../../../widgets/kotak_peringatan.dart';
 import '../../../widgets/menu_card.dart';
 import '../../../widgets/offline_badge.dart';
 import '../../../widgets/stat_card.dart';
 import '../../../widgets/status_bantuan_widgets.dart';
 import '../../../widgets/theme_toggle_button.dart';
 import '../../../services/perangkat_service.dart';
+import '../../dashboard/dashboard_screen.dart';
 import '../../ringkasan/ringkasan_posko_screen.dart';
 
 class BerandaScreen extends StatefulWidget {
@@ -161,6 +163,9 @@ class _BerandaScreenState extends State<BerandaScreen> {
           ),
           const SizedBox(height: 16),
 
+          // ---- Peringatan: posko hampir/sudah penuh, stok < 7 hari ----
+          if (session.poskoId != null) KotakPeringatan(poskoId: session.poskoId),
+
           // ---- Status bantuan posko (hanya saat beroperasi) ----
           if (_ringkasan?.posko.isBeroperasi ?? false) ...[
             KartuStatusBantuan(ringkasan: _ringkasan!, onTap: _bukaRingkasan),
@@ -217,6 +222,21 @@ class _BerandaScreenState extends State<BerandaScreen> {
               title: 'KEBUTUHAN & KOMPOSISI',
               description: 'Kebutuhan bantuan, komposisi, perhatian medis',
               onTap: _bukaRingkasan,
+            ),
+          ],
+          if (SessionService.instance.poskoId != null) ...[
+            const SizedBox(height: 12),
+            MenuCard(
+              icon: Icons.insights_rounded,
+              iconColor: AppColors.accentBlue,
+              title: 'DASHBOARD GRAFIK',
+              description: 'Grafik pengungsi, tren 7 hari, dan stok posko',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      DashboardScreen(poskoId: SessionService.instance.poskoId),
+                ),
+              ),
             ),
           ],
           // Di HP Anggota tab ke-4 adalah Sinkron (kartu di atas).

@@ -35,6 +35,7 @@ import 'package:flutter_application_1/screens/relawan/logistik/logistik_screen.d
 import 'package:flutter_application_1/screens/relawan/pengungsi/pengungsi_form_screen.dart';
 import 'package:flutter_application_1/screens/relawan/pengungsi/pengungsi_screen.dart';
 import 'package:flutter_application_1/screens/relawan/relawan_shell_screen.dart';
+import 'package:flutter_application_1/screens/dashboard/dashboard_screen.dart';
 import 'package:flutter_application_1/screens/ringkasan/ringkasan_posko_screen.dart';
 import 'package:flutter_application_1/screens/admin/kelola_admin/kelola_admin_screen.dart';
 import 'package:flutter_application_1/screens/admin/kelola_relawan/kelola_relawan_screen.dart';
@@ -45,6 +46,8 @@ import 'package:flutter_application_1/screens/role_selection/role_selection_scre
 import 'package:flutter_application_1/services/perangkat_service.dart';
 import 'package:flutter_application_1/screens/sinkron/sinkron_screen.dart';
 import 'package:flutter_application_1/services/session_service.dart';
+import 'package:flutter_application_1/core/data_options.dart';
+import 'package:flutter_application_1/widgets/kotak_peringatan.dart';
 import 'package:flutter_application_1/theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -213,6 +216,87 @@ void main() {
   ]) {
     layar(nama, buat, sebagaiAdmin: true, hpAnggota: true);
   }
+
+  // ---------------- DASHBOARD GRAFIK ----------------
+  layar('Dashboard grafik semua posko', () async => const DashboardScreen(),
+      sebagaiAdmin: true);
+  layar('Dashboard grafik satu posko',
+      () async => const DashboardScreen(poskoId: 1));
+
+  testWidgets('dashboard grafik: semua bagian tampil & bisa dibuka dari beranda',
+      (tester) async {
+    SessionService.instance.startRelawan(relawan);
+    await cek(tester, BerandaScreen(onOpenMenu: (_) {}), gelap: false, skalaTeks: 1);
+    expect(find.text('DASHBOARD GRAFIK'), findsOneWidget);
+
+    await cek(tester, const DashboardScreen(poskoId: 1), gelap: true, skalaTeks: 1.3);
+    for (final judul in [
+      'Keterisian Posko',
+      'Jenis Kelamin',
+      'Kelompok Usia',
+      'Kelompok Rentan',
+      'Kondisi Kesehatan',
+      'Pengungsi Baru (7 Hari)',
+      'Barang Masuk & Keluar (7 Hari)',
+      'Status Stok Barang Pokok',
+      'Stok Cukup Untuk Berapa Hari',
+    ]) {
+      await tester.scrollUntilVisible(find.text(judul), 300,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text(judul), findsOneWidget, reason: judul);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  // ---------------- PERINGATAN KAPASITAS & STOK ----------------
+  testWidgets('peringatan posko penuh & stok: kotak rapi di beranda dan form',
+      (tester) async {
+    // Data terpisah supaya tes lain tidak terpengaruh.
+    final asli = LocalDatabase.store;
+    LocalDatabase.store = MemoryTableStore(seed: DemoData.seed());
+    addTearDown(() => LocalDatabase.store = asli);
+
+    await tester.runAsync(() async {
+      final store = LocalDatabase.store;
+      final p = (await PoskoRepository.withStore(store).findById(1))!;
+      final ada = await PengungsiRepository.withStore(store).count(poskoId: 1);
+      final list = [
+        for (var i = ada; i < p.kapasitas; i++)
+          Pengungsi.baru(
+            poskoId: 1,
+            nama: 'Orang $i',
+            asal: 'X',
+            tanggalLahir: DateTime(1990),
+            jenisKelamin: DataOptions.lakiLaki,
+          ),
+      ];
+      await PengungsiRepository.withStore(store).addMany(list);
+    });
+
+    SessionService.instance.startRelawan(relawan);
+    for (final (gelap, skala) in [(false, 1.0), (true, 1.3)]) {
+      await cek(tester, BerandaScreen(onOpenMenu: (_) {}), gelap: gelap, skalaTeks: skala);
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 200)));
+      await tester.pumpAndSettle();
+      expect(find.text('Posko Desa Panggarangan sudah penuh'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await cek(tester, const PengungsiFormScreen(), gelap: gelap, skalaTeks: skala);
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 200)));
+      await tester.pumpAndSettle();
+      expect(find.text('Posko Desa Panggarangan sudah penuh'), findsOneWidget);
+      expect(find.textContaining('Stok'), findsNothing,
+          reason: 'di form hanya peringatan kapasitas');
+      expect(tester.takeException(), isNull);
+    }
+
+    SessionService.instance.startAdmin(admin);
+    await cek(tester, const KotakPeringatan(), gelap: true, skalaTeks: 1.3);
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 200)));
+    await tester.pumpAndSettle();
+    expect(find.text('Posko Desa Panggarangan sudah penuh'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   // ---------------- SINKRON (Tahap D) ----------------
   layar('Sinkron antar-HP', () async => const SinkronScreen(), sebagaiAdmin: true);

@@ -120,6 +120,23 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
    - [ ] Pratinjau: data "Tidak berubah" / "Dilewati"; setelah konfirmasi tidak ada data dobel, stok tidak bertambah.
 4. Hapus file paket dari flashdisk.
 
+## Skenario 9: Notifikasi posko penuh & stok kurang dari 7 hari (tanpa internet)
+
+1. Buka aplikasi pertama kali setelah dipasang.
+   - [ ] Muncul jendela **izinkan notifikasi** (Android 13+) → **Izinkan**.
+2. HP Induk: buat posko kecil, misal luas **35 m²** (kapasitas 10 orang) → **MULAI OPERASI**.
+3. Tambah 8 pengungsi ke posko itu.
+   - [ ] Muncul notifikasi **"Posko … hampir penuh"** (8/10 orang, 80%), dan kotak kuning di Beranda.
+   - [ ] Menambah pengungsi ke-9 **tidak** memunculkan notifikasi lagi.
+4. Tambah sampai 10 orang.
+   - [ ] Notifikasi **"Posko … sudah penuh"**. Form Tambah Pengungsi menampilkan kotak merah (data tetap bisa disimpan).
+5. Stok: catat barang masuk Beras secukupnya untuk ± 3 hari (lihat layar Kebutuhan & Komposisi).
+   - [ ] Notifikasi **"Stok Posko … kurang dari 7 hari"** berisi nama barang & sisa hari.
+6. Catat barang keluar sampai stok beras 0.
+   - [ ] Notifikasi **"Stok habis di Posko …"**.
+7. Tolak izin notifikasi (Pengaturan HP → Aplikasi → Notifikasi → matikan), ulangi langkah 3.
+   - [ ] Tidak ada notifikasi, tetapi kotak peringatan di Beranda tetap tampil; aplikasi tidak error.
+
 ---
 
 ## Jika ada masalah

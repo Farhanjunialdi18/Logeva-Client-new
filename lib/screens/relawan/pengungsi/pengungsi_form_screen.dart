@@ -28,6 +28,7 @@ import '../../../utils/waktu_wib.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/app_dropdown_field.dart';
 import '../../../widgets/app_text_field.dart';
+import '../../../widgets/kotak_peringatan.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/segmented_choice.dart';
@@ -233,6 +234,14 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
+
+              // Posko hampir/sudah penuh: tetap boleh dicatat, tapi diberi tahu.
+              if (!_isEdit && _poskoId != null)
+                KotakPeringatan(
+                  key: ValueKey(_poskoId),
+                  poskoId: _poskoId,
+                  tampilStok: false,
+                ),
 
               AppTextField(
                 label: 'NAMA LENGKAP',
