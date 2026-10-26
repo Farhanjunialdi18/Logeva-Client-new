@@ -34,6 +34,14 @@ class SessionService {
     admin = session;
   }
 
+  // ---------------- PENCATAT ----------------
+
+  /// Nama akun yang sedang login, untuk kolom dicatat_oleh.
+  String get namaPencatat => relawan?.nama ?? admin?.nama ?? '';
+
+  /// Posko tugas relawan yang login (null = admin / belum ditempatkan).
+  int? get poskoId => relawan?.poskoId;
+
   // ---------------- LOGOUT ----------------
 
   void clear() {

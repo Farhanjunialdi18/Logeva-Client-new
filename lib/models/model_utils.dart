@@ -17,3 +17,6 @@ int? asInt(Object? value) {
 DateTime asDate(Object? value) {
   return DateTime.tryParse(asText(value)) ?? DateTime.now();
 }
+
+/// Ubah teks tanggal jadi DateTime (kosong/gagal -> null).
+DateTime? asDateOrNull(Object? value) => DateTime.tryParse(asText(value));

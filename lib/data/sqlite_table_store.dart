@@ -9,31 +9,50 @@ import 'database_tables.dart';
 import 'table_store.dart';
 
 class SqliteTableStore implements TableStore {
+  /// [path] & [factory] hanya diisi oleh tes (database di komputer).
+  /// Di Android keduanya kosong: memakai folder database bawaan sqflite.
+  SqliteTableStore({this.path, this.factory});
+
+  final String? path;
+  final DatabaseFactory? factory;
+
   Future<Database>? _dbFuture;
 
   /// Database dibuka sekali saja, lalu dipakai ulang.
   Future<Database> get _db => _dbFuture ??= _open();
 
   Future<Database> _open() async {
-    final folder = await getDatabasesPath();
-    return openDatabase(
-      '$folder/${DatabaseTables.databaseName}',
-      version: DatabaseTables.version,
-      onCreate: (db, version) async {
-        for (final sql in DatabaseTables.createStatements) {
-          await db.execute(sql);
-        }
-      },
-      // HP yang sudah punya database versi lama: jalankan langkah
-      // per versi secara berurutan (misal 1 -> 2 -> 3).
-      onUpgrade: (db, oldVersion, newVersion) async {
-        for (var v = oldVersion + 1; v <= newVersion; v++) {
-          for (final sql in DatabaseTables.upgradeSteps[v] ?? const <String>[]) {
+    final f = factory ?? databaseFactory;
+    final lokasi =
+        path ?? '${await f.getDatabasesPath()}/${DatabaseTables.databaseName}';
+    return f.openDatabase(
+      lokasi,
+      options: OpenDatabaseOptions(
+        version: DatabaseTables.version,
+        onCreate: (db, version) async {
+          for (final sql in DatabaseTables.createStatements) {
             await db.execute(sql);
           }
-        }
-      },
+        },
+        // HP yang sudah punya database versi lama: jalankan langkah
+        // per versi secara berurutan (misal 1 -> 2 -> 3).
+        onUpgrade: (db, oldVersion, newVersion) async {
+          for (var v = oldVersion + 1; v <= newVersion; v++) {
+            for (final sql
+                in DatabaseTables.upgradeSteps[v] ?? const <String>[]) {
+              await db.execute(sql);
+            }
+          }
+        },
+      ),
     );
+  }
+
+  /// Tutup database (dipakai tes).
+  Future<void> close() async {
+    final db = await _dbFuture;
+    await db?.close();
+    _dbFuture = null;
   }
 
   /// Buang kolom 'id' supaya SQLite membuat id otomatis.

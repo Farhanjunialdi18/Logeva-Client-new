@@ -4,11 +4,14 @@
 // Tidak pernah masuk ke database SQLite di Android.
 // ============================================================
 
-import '../models/logistik.dart';
+import '../core/data_options.dart';
+import '../models/barang.dart';
+import '../models/catatan_logistik.dart';
 import '../models/pengungsi.dart';
 import '../models/posko.dart';
 import '../models/relawan.dart';
 import '../models/riwayat_transaksi.dart';
+import '../utils/waktu_wib.dart';
 import 'database_tables.dart';
 
 class DemoData {
@@ -17,76 +20,108 @@ class DemoData {
   static Map<String, List<Map<String, Object?>>> seed() {
     final now = DateTime.now();
 
+    // poskoId 1 = Desa Panggarangan (lihat daftar posko di bawah).
     final pengungsi = [
-      Pengungsi(
+      Pengungsi.baru(
+        poskoId: 1,
         nama: 'Budi Santoso',
-        jenisKelamin: 'L',
-        usia: 42,
-        kondisi: 'Sehat',
-        domisili: 'Desa Panggarangan',
-        posko: 'Desa Panggarangan',
-        dibuatPada: now,
+        asal: 'Desa Panggarangan',
+        tanggalLahir: DateTime(1984, 3, 12),
+        jenisKelamin: DataOptions.lakiLaki,
+        nomorKk: '3602011203840001',
       ),
-      Pengungsi(
+      Pengungsi.baru(
+        poskoId: 1,
         nama: 'Siti Aminah',
-        jenisKelamin: 'P',
-        usia: 29,
-        kondisi: 'Perlu Perawatan',
-        domisili: 'Desa Panggarangan',
-        posko: 'Desa Panggarangan',
-        dibuatPada: now,
+        asal: 'Desa Panggarangan',
+        tanggalLahir: DateTime(1997, 7, 25),
+        jenisKelamin: DataOptions.perempuan,
+        kelompokRentan: 'Ibu Hamil',
       ),
-      Pengungsi(
-        nama: 'Ahmad Saputra',
-        jenisKelamin: 'L',
-        usia: 35,
-        kondisi: 'Sehat',
-        domisili: 'Desa Panggarangan',
-        posko: 'Desa Panggarangan',
-        dibuatPada: now,
+      Pengungsi.baru(
+        poskoId: 1,
+        nama: 'Mak Iyah',
+        asal: 'Desa Cikaret',
+        tanggalLahir: DateTime(1952, 1, 5),
+        jenisKelamin: DataOptions.perempuan,
+        kondisiKesehatan: 'Demam',
+        kelompokRentan: 'Lansia',
+        riwayatPenyakit: 'Hipertensi',
       ),
     ];
 
-    final logistik = [
-      Logistik(
-        namaBarang: 'Selimut',
-        kategori: 'Perlengkapan',
-        jumlah: 40,
-        satuan: 'Buah',
-        posko: 'Cisolok',
-        dibuatPada: now,
-      ),
-      Logistik(
-        namaBarang: 'Beras',
-        kategori: 'Makanan',
-        jumlah: 25,
-        satuan: 'Kg',
-        posko: 'Desa Panggarangan',
-        dibuatPada: now,
-      ),
-      Logistik(
-        namaBarang: 'Air Mineral',
-        kategori: 'Minuman',
+    // Master barang & kategori sama dengan isi awal database (versi 7).
+    final kategori = [
+      for (final (i, nama) in DataOptions.kategoriLogistik.indexed)
+        {'id': i + 1, 'nama': nama},
+    ];
+    final barang = [
+      for (final (nama, kat, satuan, kebutuhan) in DataOptions.barangAwal)
+        Barang.baru(
+          kategoriId: kat,
+          namaItem: nama,
+          satuan: satuan,
+          kebutuhanHarian: kebutuhan,
+        ),
+      Barang.baru(kategoriId: 4, namaItem: 'Selimut', satuan: 'buah'),
+    ];
+    // id barang di memori: Beras = 1, Air Mineral = 2, Selimut = 3.
+    Barang id(int n) => Barang.fromMap(barang[n - 1].toMap()..['id'] = n);
+    final hariIni = WaktuWib.hariIni();
+    final masuk = [
+      BarangMasuk.baru(
+        poskoId: 1,
+        barang: id(1),
         jumlah: 50,
-        satuan: 'Dus',
-        posko: 'Desa Panggarangan',
-        dibuatPada: now,
+        sumberBantuan: 'BPBD Lebak',
+        tanggal: hariIni.subtract(const Duration(days: 2)),
+      ),
+      BarangMasuk.baru(
+        poskoId: 1,
+        barang: id(2),
+        jumlah: 300,
+        sumberBantuan: 'Donatur warga',
+        tanggal: hariIni.subtract(const Duration(days: 1)),
+      ),
+      BarangMasuk.baru(
+        poskoId: 2,
+        barang: id(3),
+        jumlah: 40,
+        sumberBantuan: 'BNPB',
+        tanggal: hariIni,
+      ),
+    ];
+    final keluar = [
+      BarangKeluar.baru(
+        poskoId: 1,
+        barang: id(1),
+        jumlah: 12,
+        tujuan: 'dapur_umum',
+        tanggal: hariIni,
       ),
     ];
 
     final riwayat = [
       RiwayatTransaksi(
         jenis: RiwayatTransaksi.jenisImport,
-        jenisData: 'Data Logistik',
+        jenisData: 'Data Pengungsi',
         berhasil: true,
         jumlahBaris: 3,
         waktu: now.subtract(const Duration(days: 1)),
       ),
     ];
 
+    // Urutan ini menentukan id di memori: Desa Panggarangan = 1, Cisolok = 2.
     final posko = [
-      Posko(nama: 'Desa Panggarangan', alamat: 'Kec. Panggarangan', dibuatPada: now),
-      Posko(nama: 'Cisolok', alamat: 'Kec. Cisolok', dibuatPada: now),
+      Posko.baru(
+        nama: 'Desa Panggarangan',
+        namaDesa: 'Panggarangan',
+        alamat: 'Kec. Panggarangan',
+        luasLokasi: 1050,
+        latitude: '-6.9195',
+        longitude: '106.1297',
+      ).ubahStatus(AksiOperasional.mulai, now.subtract(const Duration(days: 2))),
+      Posko.baru(nama: 'Cisolok', namaDesa: 'Cisolok', alamat: 'Kec. Cisolok'),
     ];
 
     final relawan = [
@@ -94,6 +129,7 @@ class DemoData {
         nama: 'Andi Saputra',
         kontak: 'andi@gmail.com',
         pin: '123456',
+        poskoId: 1,
         posko: 'Desa Panggarangan',
         dibuatPada: now.subtract(const Duration(hours: 3)),
       ),
@@ -103,7 +139,10 @@ class DemoData {
     // otomatis oleh AdminRepository.ensureDefaultAdmin() (web & Android).
     return {
       DatabaseTables.pengungsi: pengungsi.map((e) => e.toMap()).toList(),
-      DatabaseTables.logistik: logistik.map((e) => e.toMap()).toList(),
+      DatabaseTables.kategoriLogistik: kategori,
+      DatabaseTables.barang: barang.map((e) => e.toMap()).toList(),
+      DatabaseTables.barangMasuk: masuk.map((e) => e.toMap()).toList(),
+      DatabaseTables.barangKeluar: keluar.map((e) => e.toMap()).toList(),
       DatabaseTables.riwayat: riwayat.map((e) => e.toMap()).toList(),
       DatabaseTables.posko: posko.map((e) => e.toMap()).toList(),
       DatabaseTables.relawan: relawan.map((e) => e.toMap()).toList(),

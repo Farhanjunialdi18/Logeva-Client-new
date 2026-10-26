@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../../../core/data_options.dart';
 import '../../../data/repositories/posko_repository.dart';
 import '../../../data/repositories/relawan_repository.dart';
+import '../../../models/posko.dart';
 import '../../../models/relawan.dart';
 import '../../../utils/app_snackbar.dart';
 import '../../../utils/validators.dart';
@@ -19,7 +20,7 @@ import '../../../widgets/app_text_field.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/pin_card.dart';
 import '../../../widgets/primary_button.dart';
-import 'tambah_posko_dialog.dart';
+import '../posko/posko_form_screen.dart';
 
 class RelawanAkunFormScreen extends StatefulWidget {
   final Relawan? existing;
@@ -39,7 +40,7 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
   late final TextEditingController _nama;
   late final TextEditingController _kontak;
 
-  List<String> _daftarPosko = [];
+  List<Posko> _daftarPosko = [];
   String _posko = _belumDitempatkan;
   late String _status;
   String? _pin;
@@ -76,10 +77,12 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
   }
 
   Future<void> _loadPosko({String? pilih}) async {
-    final names = await PoskoRepository.instance.getNames();
+    final posko = await PoskoRepository.instance.getAll();
+    posko.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+    final names = posko.map((p) => p.nama).toList();
     if (!mounted) return;
     setState(() {
-      _daftarPosko = names;
+      _daftarPosko = posko;
       // Saat tambah baru & posko sudah ada, pilih posko pertama otomatis.
       if (pilih != null) {
         _posko = pilih;
@@ -110,15 +113,16 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
       setState(() => _posko = value ?? _belumDitempatkan);
       return;
     }
-    // Pilih "+ Tambah posko baru" -> buka popup, lalu pilih posko barunya.
-    final baru = await TambahPoskoDialog.show(context);
+    // Pilih "+ Tambah posko baru" -> buka form posko, lalu pilih posko barunya.
+    final baru = await Navigator.of(context).push<Posko>(
+      MaterialPageRoute(builder: (_) => const PoskoFormScreen()),
+    );
     if (!mounted) return;
     if (baru == null) {
       setState(() => _poskoVersion++); // kembalikan pilihan sebelumnya
       return;
     }
-    AppSnackbar.show(context, 'Posko "$baru" ditambahkan.');
-    await _loadPosko(pilih: baru);
+    await _loadPosko(pilih: baru.nama);
   }
 
   Future<void> _simpan() async {
@@ -127,18 +131,22 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
     if (!_isEdit && _pin == null) return; // PIN belum selesai dibuat
 
     setState(() => _saving = true);
-    final posko = _posko == _belumDitempatkan ? '' : _posko;
+    Posko? posko;
+    for (final p in _daftarPosko) {
+      if (p.nama == _posko) posko = p;
+    }
 
     try {
       String pesan;
       if (_isEdit) {
         await RelawanRepository.instance.update(
-          widget.existing!.copyWith(
-            nama: _nama.text.trim(),
-            kontak: _kontak.text.trim(),
-            posko: posko,
-            status: _status,
-          ),
+          widget.existing!
+              .copyWith(
+                nama: _nama.text.trim(),
+                kontak: _kontak.text.trim(),
+                status: _status,
+              )
+              .tempatkan(posko),
         );
         pesan = 'Data relawan diperbarui.';
       } else {
@@ -147,10 +155,9 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
             nama: _nama.text.trim(),
             kontak: _kontak.text.trim(),
             pin: _pin!,
-            posko: posko,
             status: _status,
             dibuatPada: DateTime.now(),
-          ),
+          ).tempatkan(posko),
         );
         pesan = 'Relawan ditambahkan. PIN login: ${hasil.pin}';
       }
@@ -209,7 +216,11 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
                 key: ValueKey('posko-$_poskoVersion'),
                 label: 'Posko',
                 value: _posko,
-                items: [_belumDitempatkan, ..._daftarPosko, _tambahPoskoBaru],
+                items: [
+                  _belumDitempatkan,
+                  ..._daftarPosko.map((p) => p.nama),
+                  _tambahPoskoBaru,
+                ],
                 onChanged: _pilihPosko,
               ),
               const SizedBox(height: 16),

@@ -10,10 +10,11 @@ import 'package:flutter/material.dart';
 import '../../../core/app_constants.dart';
 import '../../../data/data_events.dart';
 import '../../../data/repositories/admin_repository.dart';
-import '../../../data/repositories/logistik_repository.dart';
+import '../../../data/repositories/barang_repository.dart';
 import '../../../data/repositories/pengungsi_repository.dart';
 import '../../../data/repositories/relawan_repository.dart';
 import '../../../services/aktivitas_service.dart';
+import '../../../services/ringkasan_posko_service.dart';
 import '../../../services/session_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
@@ -25,7 +26,9 @@ import '../../../widgets/menu_card.dart';
 import '../../../widgets/offline_badge.dart';
 import '../../../widgets/square_icon_button.dart';
 import '../../../widgets/stat_card.dart';
+import '../../../widgets/status_bantuan_widgets.dart';
 import '../../../widgets/theme_toggle_button.dart';
+import '../../ringkasan/ringkasan_posko_screen.dart';
 import '../data/admin_data_menu_screen.dart';
 
 class AdminBerandaScreen extends StatefulWidget {
@@ -60,6 +63,7 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
   int? _jumlahLogistik;
   int? _jumlahRelawan;
   int? _jumlahAdmin;
+  List<RingkasanPosko> _poskoBeroperasi = [];
   List<Aktivitas> _aktivitas = [];
 
   @override
@@ -77,10 +81,11 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
 
   Future<void> _load() async {
     final pengungsi = await PengungsiRepository.instance.count();
-    final logistik = await LogistikRepository.instance.count();
+    final logistik = await BarangRepository.instance.count();
     final relawan = await RelawanRepository.instance.count();
     final admin = await AdminRepository.instance.count();
     final aktivitas = await AktivitasService.terbaru(limit: 5);
+    final beroperasi = await RingkasanPoskoService.poskoBeroperasi();
     if (!mounted) return;
     setState(() {
       _jumlahPengungsi = pengungsi;
@@ -88,6 +93,7 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
       _jumlahRelawan = relawan;
       _jumlahAdmin = admin;
       _aktivitas = aktivitas;
+      _poskoBeroperasi = beroperasi;
     });
   }
 
@@ -175,8 +181,8 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
                 child: StatCard(
                   icon: Icons.inventory_2_rounded,
                   iconColor: AppColors.accentAmber,
-                  label: 'DATA LOGISTIK',
-                  value: _angka(_jumlahLogistik, 'Item'),
+                  label: 'MASTER BARANG',
+                  value: _angka(_jumlahLogistik, 'Barang'),
                 ),
               ),
             ],
@@ -204,6 +210,25 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
             ],
           ),
           const SizedBox(height: 24),
+
+          // ---- Posko butuh bantuan (posko beroperasi, paling mendesak dulu) ----
+          if (_poskoBeroperasi.isNotEmpty) ...[
+            Text('POSKO BEROPERASI', style: AppTextStyles.label(p)),
+            const SizedBox(height: 12),
+            for (final r in _poskoBeroperasi) ...[
+              KartuStatusBantuan(
+                ringkasan: r,
+                tampilNamaPosko: true,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RingkasanPoskoScreen(posko: r.posko),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            const SizedBox(height: 12),
+          ],
 
           // ---- Aksi cepat ----
           Text('AKSI CEPAT', style: AppTextStyles.label(p)),
@@ -239,6 +264,22 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
             description: 'Melihat data logistik',
             onTap: () => widget.onOpenDataPage(AdminDataPage.logistik),
           ),
+          const SizedBox(height: 12),
+          MenuCard(
+            icon: Icons.sync_alt_rounded,
+            iconColor: AppColors.accentBlue,
+            title: 'SINKRON ANTAR-HP',
+            description: 'Tukar data dengan HP lain di posko ini (Bluetooth)',
+            onTap: () => widget.onOpenDataPage(AdminDataPage.sinkron),
+          ),
+          const SizedBox(height: 12),
+          MenuCard(
+            icon: Icons.archive_rounded,
+            iconColor: AppColors.success,
+            title: 'EKSPOR PAKET DATA POSKO',
+            description: 'File ZIP untuk dibawa ke pusat lewat USB',
+            onTap: () => widget.onOpenDataPage(AdminDataPage.paket),
+          ),
           const SizedBox(height: 24),
 
           // ---- Aktivitas terbaru ----
@@ -252,7 +293,7 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
             icon: Icons.bar_chart_rounded,
             iconColor: AppColors.accentBlue,
             title: 'DATA',
-            description: 'Pengungsi, logistik, import & export',
+            description: 'Posko, pengungsi, logistik, paket data',
             onTap: () => widget.onOpenTab(_tabData),
           ),
           const SizedBox(height: 12),

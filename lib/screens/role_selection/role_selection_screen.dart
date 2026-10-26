@@ -1,12 +1,14 @@
 // ============================================================
 // role_selection_screen.dart
-// HALAMAN AWAL: pilih masuk sebagai ADMIN atau RELAWAN.
+// HALAMAN AWAL: pilih masuk sebagai ADMIN atau RELAWAN, atau siapkan
+// HP ini sebagai HP Anggota dari File Penyiapan HP Induk.
 // ============================================================
 
 import 'package:flutter/material.dart';
 
 import '../../core/app_constants.dart';
 import '../../routes/app_routes.dart';
+import '../../services/perangkat_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../widgets/app_background.dart';
@@ -73,12 +75,36 @@ class RoleSelectionScreen extends StatelessWidget {
               ],
             ),
 
-            // ---- Catatan bawah ----
+            // ---- Catatan bawah + penyiapan HP Anggota ----
             Padding(
-              padding: const EdgeInsets.only(top: 32, bottom: 8),
-              child: Text(
-                'Gunakan akun sesuai dengan peran Anda',
-                style: AppTextStyles.small(p),
+              padding: const EdgeInsets.only(top: 24, bottom: 8),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: PerangkatService.anggota,
+                builder: (context, anggota, _) => Column(
+                  children: [
+                    Text(
+                      anggota
+                          ? 'HP Anggota · login dengan akun dari HP Induk'
+                          : 'Gunakan akun sesuai dengan peran Anda',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.small(p),
+                    ),
+                    if (!anggota)
+                      TextButton.icon(
+                        onPressed: () => Navigator.pushNamed(
+                            context, AppRoutes.terimaPenyiapan),
+                        icon: const Icon(Icons.install_mobile_rounded,
+                            size: 18, color: AppColors.primary),
+                        label: const Text(
+                          'Siapkan HP ini dari HP Induk',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],

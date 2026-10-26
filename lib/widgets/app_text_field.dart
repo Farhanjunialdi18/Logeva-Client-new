@@ -27,6 +27,11 @@ class AppTextField extends StatelessWidget {
   /// true = tampilkan tanda * merah di samping label (wajib diisi).
   final bool isRequired;
 
+  /// true + [onTap] = kolom tidak bisa diketik, ketuk untuk memilih
+  /// (misal pemilih tanggal).
+  final bool readOnly;
+  final VoidCallback? onTap;
+
   const AppTextField({
     super.key,
     required this.label,
@@ -41,6 +46,8 @@ class AppTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.sideAction,
     this.isRequired = false,
+    this.readOnly = false,
+    this.onTap,
   });
 
   @override
@@ -56,6 +63,8 @@ class AppTextField extends StatelessWidget {
       onFieldSubmitted: onFieldSubmitted,
       inputFormatters: inputFormatters,
       textCapitalization: textCapitalization,
+      readOnly: readOnly,
+      onTap: onTap,
       style: AppTextStyles.input(p),
       cursorColor: AppColors.primary,
       decoration: AppInputDecoration.build(p, hint: hint),

@@ -27,7 +27,9 @@ class _PenyimpananScreenState extends State<PenyimpananScreen> {
   /// Label tampilan -> nama tabel.
   static const Map<String, String> _tabel = {
     'Pengungsi': DatabaseTables.pengungsi,
-    'Logistik': DatabaseTables.logistik,
+    'Master barang': DatabaseTables.barang,
+    'Barang masuk': DatabaseTables.barangMasuk,
+    'Barang keluar': DatabaseTables.barangKeluar,
     'Riwayat transaksi': DatabaseTables.riwayat,
     'Relawan': DatabaseTables.relawan,
     'Admin': DatabaseTables.admin,

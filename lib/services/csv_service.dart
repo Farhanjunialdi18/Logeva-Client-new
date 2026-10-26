@@ -35,19 +35,32 @@ class CsvService {
 
   /// Hasil: daftar baris, tiap baris = {nama_kolom: isi}.
   /// Nama kolom dibuat huruf kecil & spasi diganti '_'.
-  static List<Map<String, String>> decode(String content) {
+  ///
+  /// [cariJudul]: kalau diisi, baris judul = baris PERTAMA yang memuat
+  /// semua nama kolom ini (untuk file Excel website yang punya baris judul
+  /// laporan di atas tabel). Kosong = baris pertama file.
+  static List<Map<String, String>> decode(
+    String content, {
+    List<String> cariJudul = const [],
+  }) {
     var text = content;
     if (text.startsWith('﻿')) text = text.substring(1); // buang BOM
 
     final rows = _parse(text, _detectDelimiter(text));
     if (rows.isEmpty) return [];
 
-    final headers = rows.first
-        .map((h) => h.trim().toLowerCase().replaceAll(' ', '_'))
-        .toList();
+    List<String> normal(List<String> row) =>
+        row.map((h) => h.trim().toLowerCase().replaceAll(' ', '_')).toList();
+
+    var mulai = 0;
+    if (cariJudul.isNotEmpty) {
+      mulai = rows.indexWhere((r) => cariJudul.every(normal(r).contains));
+      if (mulai < 0) return [];
+    }
+    final headers = normal(rows[mulai]);
 
     final result = <Map<String, String>>[];
-    for (final row in rows.skip(1)) {
+    for (final row in rows.skip(mulai + 1)) {
       if (row.every((cell) => cell.trim().isEmpty)) continue; // baris kosong
       final map = <String, String>{};
       for (var i = 0; i < headers.length; i++) {

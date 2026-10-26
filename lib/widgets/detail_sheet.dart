@@ -1,7 +1,8 @@
 // ============================================================
 // detail_sheet.dart
 // Panel dari bawah layar: daftar "label : isi" + tombol EDIT & HAPUS.
-// Dipakai detail pengungsi dan detail logistik.
+// Kalau [catatan] diisi, tombol diganti teks catatan (data tidak bisa
+// diubah, misal catatan barang masuk/keluar).
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class DetailSheet {
     BuildContext context, {
     required String title,
     required Map<String, String> rows,
+    String? catatan,
   }) {
     final p = AppPalette.of(context);
 
@@ -70,6 +72,9 @@ class DetailSheet {
                   ),
                 ),
               const SizedBox(height: 20),
+              if (catatan != null)
+                Text(catatan, style: AppTextStyles.small(p))
+              else
               Row(
                 children: [
                   Expanded(

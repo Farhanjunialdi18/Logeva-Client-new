@@ -107,7 +107,7 @@ class _KelolaAdminScreenState extends State<KelolaAdminScreen> {
           if (AdminRules.bolehKelola)
             PrimaryButton(text: '+ TAMBAH ADMIN', onPressed: _tambah)
           else
-            Text(AdminRules.pesanBukanSuperAdmin, style: AppTextStyles.small(p)),
+            Text(AdminRules.pesanTidakBoleh, style: AppTextStyles.small(p)),
           const SizedBox(height: 14),
 
           SearchField(

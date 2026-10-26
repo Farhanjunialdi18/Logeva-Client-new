@@ -12,6 +12,7 @@ import '../../../data/data_events.dart';
 import '../../../data/repositories/relawan_repository.dart';
 import '../../../models/relawan.dart';
 import '../../../theme/app_colors.dart';
+import '../../../theme/app_text_styles.dart';
 import '../../../utils/app_snackbar.dart';
 import '../../../utils/date_formatter.dart';
 import '../../../widgets/app_background.dart';
@@ -23,6 +24,8 @@ import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/secondary_button.dart';
 import '../../../widgets/status_dot.dart';
+import '../../../services/perangkat_service.dart';
+import '../../../widgets/dikelola_induk_banner.dart';
 import 'relawan_akun_form_screen.dart';
 
 class RelawanAkunDetailScreen extends StatefulWidget {
@@ -184,15 +187,20 @@ class _RelawanAkunDetailScreenState extends State<RelawanAkunDetailScreen> {
                   ),
                   DetailRow(
                     label: 'PIN',
-                    child: Text(
-                      _tampilkanPin ? relawan.pin : '••••••',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2,
-                        color: p.textPrimary,
-                      ),
-                    ),
+                    child: relawan.pinTerlihat
+                        ? Text(
+                            _tampilkanPin ? relawan.pin : '••••••',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2,
+                              color: p.textPrimary,
+                            ),
+                          )
+                        : Text(
+                            'Hanya terlihat di HP Induk',
+                            style: AppTextStyles.body(p),
+                          ),
                   ),
                   DetailRow(
                     label: 'Dibuat',
@@ -208,40 +216,44 @@ class _RelawanAkunDetailScreenState extends State<RelawanAkunDetailScreen> {
               ),
               const SizedBox(height: 16),
 
-              PrimaryButton(
-                text: _tampilkanPin ? 'SEMBUNYIKAN PIN' : 'LIHAT PIN',
-                onPressed: () => setState(() => _tampilkanPin = !_tampilkanPin),
-              ),
-              const SizedBox(height: 12),
-              SecondaryButton(
-                text: 'GENERATE PIN BARU',
-                icon: Icons.autorenew_rounded,
-                height: 54,
-                isLoading: _generating,
-                onPressed: () => _generatePinBaru(relawan),
-              ),
-              const SizedBox(height: 12),
-              SecondaryButton(
-                text: 'EDIT RELAWAN',
-                height: 54,
-                onPressed: () => _edit(relawan),
-              ),
-              const SizedBox(height: 12),
-              SecondaryButton(
-                text: relawan.isAktif
-                    ? 'NONAKTIFKAN RELAWAN'
-                    : 'AKTIFKAN RELAWAN',
-                height: 54,
-                isLoading: _busy,
-                onPressed: () => _ubahStatus(relawan),
-              ),
-              const SizedBox(height: 12),
-              SecondaryButton(
-                text: 'HAPUS RELAWAN',
-                icon: Icons.delete_outline_rounded,
-                height: 54,
-                onPressed: () => _hapus(relawan),
-              ),
+              if (PerangkatService.isAnggota)
+                const DikelolaIndukBanner()
+              else ...[
+                PrimaryButton(
+                  text: _tampilkanPin ? 'SEMBUNYIKAN PIN' : 'LIHAT PIN',
+                  onPressed: () => setState(() => _tampilkanPin = !_tampilkanPin),
+                ),
+                const SizedBox(height: 12),
+                SecondaryButton(
+                  text: 'GENERATE PIN BARU',
+                  icon: Icons.autorenew_rounded,
+                  height: 54,
+                  isLoading: _generating,
+                  onPressed: () => _generatePinBaru(relawan),
+                ),
+                const SizedBox(height: 12),
+                SecondaryButton(
+                  text: 'EDIT RELAWAN',
+                  height: 54,
+                  onPressed: () => _edit(relawan),
+                ),
+                const SizedBox(height: 12),
+                SecondaryButton(
+                  text: relawan.isAktif
+                      ? 'NONAKTIFKAN RELAWAN'
+                      : 'AKTIFKAN RELAWAN',
+                  height: 54,
+                  isLoading: _busy,
+                  onPressed: () => _ubahStatus(relawan),
+                ),
+                const SizedBox(height: 12),
+                SecondaryButton(
+                  text: 'HAPUS RELAWAN',
+                  icon: Icons.delete_outline_rounded,
+                  height: 54,
+                  onPressed: () => _hapus(relawan),
+                ),
+              ],
             ],
             const SizedBox(height: 16),
           ],

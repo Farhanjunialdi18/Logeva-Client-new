@@ -1,7 +1,9 @@
 // ============================================================
 // pengungsi_screen.dart
-// HALAMAN DATA PENGUNGSI:
-// total, tombol tambah, pencarian, import/export CSV, dan tabel.
+// HALAMAN DATA PENGUNGSI (relawan): hanya pengungsi di posko tugasnya.
+// Total, tombol tambah, pencarian, dan tabel.
+// Import/export CSV hanya di layar admin (HP Induk); data relawan berpindah
+// lewat Sinkron Antar-HP dan Paket Data Posko.
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -10,16 +12,13 @@ import '../../../data/data_events.dart';
 import '../../../data/repositories/pengungsi_repository.dart';
 import '../../../models/pengungsi.dart';
 import '../../../services/session_service.dart';
-import '../../../services/transfer_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
-import '../../../utils/app_snackbar.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/data_table_card.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/search_field.dart';
-import '../../../widgets/secondary_button.dart';
 import '../../../widgets/summary_card.dart';
 import 'pengungsi_detail_sheet.dart';
 import 'pengungsi_form_screen.dart';
@@ -37,8 +36,6 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
   List<Pengungsi> _semua = [];
   bool _loading = true;
   String _kataCari = '';
-  bool _importing = false;
-  bool _exporting = false;
 
   @override
   void initState() {
@@ -54,7 +51,10 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
   }
 
   Future<void> _load() async {
-    final data = await PengungsiRepository.instance.getAll();
+    final poskoId = SessionService.instance.poskoId;
+    final data = poskoId == null
+        ? <Pengungsi>[]
+        : await PengungsiRepository.instance.getByPosko(poskoId);
     if (!mounted) return;
     setState(() {
       _semua = data;
@@ -68,8 +68,8 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
     return _semua
         .where((e) =>
             e.nama.toLowerCase().contains(q) ||
-            e.domisili.toLowerCase().contains(q) ||
-            e.nik.contains(q))
+            e.asal.toLowerCase().contains(q) ||
+            e.nomorKk.contains(q))
         .toList();
   }
 
@@ -79,30 +79,11 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
     );
   }
 
-  Future<void> _import() async {
-    setState(() => _importing = true);
-    final result = await TransferService.importPengungsi();
-    if (!mounted) return;
-    setState(() => _importing = false);
-    if (result.status != TransferStatus.cancelled) {
-      AppSnackbar.show(context, result.message, isError: result.isError);
-    }
-  }
-
-  Future<void> _export() async {
-    setState(() => _exporting = true);
-    final result = await TransferService.exportPengungsi();
-    if (!mounted) return;
-    setState(() => _exporting = false);
-    if (result.status != TransferStatus.cancelled) {
-      AppSnackbar.show(context, result.message, isError: result.isError);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
     final list = _hasilCari;
+    final perluDilengkapi = _semua.where((e) => e.perluDilengkapi).length;
 
     return AppBackground(
       child: Column(
@@ -131,32 +112,13 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
           ),
           const SizedBox(height: 14),
 
-          Row(
-            children: [
-              Expanded(
-                child: SecondaryButton(
-                  text: 'IMPORT CSV',
-                  icon: Icons.file_download_outlined,
-                  isLoading: _importing,
-                  onPressed: _exporting ? null : _import,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: SecondaryButton(
-                  text: 'EXPORT CSV',
-                  icon: Icons.file_upload_outlined,
-                  isLoading: _exporting,
-                  onPressed: _importing ? null : _export,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Import CSV ke data lokal · Export data lokal ke CSV',
-            style: AppTextStyles.small(p),
-          ),
+          if (perluDilengkapi > 0) ...[
+            Text(
+              '⚠ $perluDilengkapi pengungsi belum punya tanggal lahir '
+              '(data versi lama). Ketuk baris bertanda ⚠ untuk melengkapi.',
+              style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
+            ),
+          ],
           const SizedBox(height: 14),
 
           DataTableCard(
@@ -168,16 +130,16 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
               TableColumnSpec('Nama', flex: 30),
               TableColumnSpec('JK', flex: 10),
               TableColumnSpec('Usia', flex: 14),
-              TableColumnSpec('Kondisi', flex: 22),
-              TableColumnSpec('Domisili', flex: 24),
+              TableColumnSpec('Rentan', flex: 22),
+              TableColumnSpec('Asal', flex: 24),
             ],
             rows: list
                 .map((e) => [
-                      e.nama,
-                      e.jenisKelamin,
+                      e.perluDilengkapi ? '⚠ ${e.nama}' : e.nama,
+                      e.isPerempuan ? 'P' : 'L',
                       '${e.usia} th',
-                      e.kondisi,
-                      e.domisili,
+                      e.isRentan ? e.kelompokRentan : '-',
+                      e.asal,
                     ])
                 .toList(),
             onRowTap: (i) => PengungsiDetailSheet.show(context, list[i]),

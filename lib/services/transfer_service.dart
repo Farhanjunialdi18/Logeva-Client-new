@@ -1,18 +1,18 @@
 // ============================================================
 // transfer_service.dart
-// Proses IMPORT & EXPORT CSV untuk pengungsi dan logistik,
+// Proses IMPORT & EXPORT CSV pengungsi (per posko, format website),
 // sekaligus mencatat hasilnya ke Riwayat Transaksi.
 // ============================================================
 
-import '../data/repositories/logistik_repository.dart';
 import '../data/repositories/pengungsi_repository.dart';
 import '../data/repositories/riwayat_repository.dart';
-import '../models/logistik.dart';
 import '../models/pengungsi.dart';
+import '../models/posko.dart';
 import '../models/riwayat_transaksi.dart';
 import '../utils/date_formatter.dart';
 import 'csv_service.dart';
 import 'file_service.dart';
+import 'pengungsi_csv.dart';
 import 'session_service.dart';
 
 enum TransferStatus { success, failed, cancelled }
@@ -30,52 +30,125 @@ class TransferService {
   TransferService._();
 
   static const String _labelPengungsi = 'Data Pengungsi';
-  static const String _labelLogistik = 'Data Logistik';
 
   // ================= PENGUNGSI =================
+  // Format = template Import Pengungsi website (per posko), lihat
+  // pengungsi_csv.dart. Satu file = satu posko.
 
-  static Future<TransferResult> exportPengungsi() {
-    return _export<Pengungsi>(
+  static Future<TransferResult> exportPengungsi(Posko posko) async {
+    final list = await PengungsiRepository.instance.getByPosko(posko.id);
+    final tanpaLahir = list.where((e) => e.perluDilengkapi).length;
+    final tanpaKk = list.where((e) => e.nomorKk.isEmpty).length;
+
+    final hasil = await _export<Pengungsi>(
       jenisData: _labelPengungsi,
-      filePrefix: 'pengungsi',
-      headers: Pengungsi.csvHeaders,
-      load: PengungsiRepository.instance.getAll,
-      toRow: (e) => e.toCsvRow(),
+      filePrefix: 'pengungsi_${_namaFile(posko.nama)}',
+      headers: PengungsiCsv.headers,
+      load: () async => list,
+      toRow: PengungsiCsv.toRow,
+    );
+    if (hasil.status != TransferStatus.success) return hasil;
+
+    final catatan = [
+      if (tanpaLahir > 0) '$tanpaLahir tanpa tanggal lahir',
+      if (tanpaKk > 0) '$tanpaKk tanpa nomor KK',
+    ];
+    if (catatan.isEmpty) return hasil;
+    return TransferResult(
+      TransferStatus.success,
+      '${hasil.message}\n\nPerhatian: ${catatan.join(' dan ')}. Import '
+      'Pengungsi di website menolak baris seperti ini; lengkapi datanya '
+      'atau kirim lewat Paket Data Posko.',
     );
   }
 
-  /// [defaultPosko] dipakai untuk baris CSV yang kolom posko-nya kosong.
-  /// Kosongkan untuk memakai posko relawan yang sedang login.
-  static Future<TransferResult> importPengungsi({String? defaultPosko}) {
-    final posko = defaultPosko ?? SessionService.instance.posko;
-    return _import<Pengungsi>(
-      jenisData: _labelPengungsi,
-      parse: (row) => Pengungsi.fromCsv(row, posko),
-      save: PengungsiRepository.instance.addMany,
-    );
+  /// Import CSV ke posko [posko]. Aturan sama dengan website:
+  /// - semua baris harus valid, kalau ada yang salah TIDAK ADA yang disimpan;
+  /// - nama + tanggal lahir sama dengan pengungsi di posko ini = diperbarui.
+  static Future<TransferResult> importPengungsi(Posko posko) async {
+    try {
+      final file = await FileService.pickCsv();
+      if (file == null) {
+        return const TransferResult(
+            TransferStatus.cancelled, 'Import dibatalkan.');
+      }
+
+      final rows = CsvService.decode(file.content);
+      if (rows.isEmpty) throw const FormatException('File CSV kosong.');
+
+      final lama = {
+        for (final e in await PengungsiRepository.instance.getByPosko(posko.id))
+          if (e.kunci != null) e.kunci!: e,
+      };
+
+      final error = <String>[];
+      final dipakai = <String, int>{};
+      final simpan = <Pengungsi>[];
+      var tambah = 0, perbarui = 0;
+      final pencatat = SessionService.instance.namaPencatat;
+
+      for (var i = 0; i < rows.length; i++) {
+        final nomor = i + 2; // baris 1 = judul kolom
+        final baris = PengungsiCsv.baca(rows[i]);
+        final masalah = [...baris.error];
+        final kunci = baris.kunci;
+        if (kunci != null && dipakai.containsKey(kunci)) {
+          masalah.add('Pengungsi sama dengan baris ${dipakai[kunci]}');
+        } else if (kunci != null) {
+          dipakai[kunci] = nomor;
+        }
+        if (masalah.isNotEmpty) {
+          error.add('Baris $nomor: ${masalah.join('; ')}');
+          continue;
+        }
+
+        final ada = lama[kunci];
+        if (ada == null) {
+          simpan.add(baris.keBaru(posko.id!, pencatat));
+          tambah++;
+        } else {
+          simpan.add(baris.perbarui(ada));
+          perbarui++;
+        }
+      }
+
+      if (error.isNotEmpty) {
+        final contoh = error.take(3).join('\n');
+        final sisa =
+            error.length > 3 ? '\n...dan ${error.length - 3} lainnya' : '';
+        throw FormatException(
+            '${error.length} baris bermasalah, tidak ada data yang disimpan.'
+            '\n$contoh$sisa');
+      }
+
+      await PengungsiRepository.instance.simpanBanyak(simpan);
+      await RiwayatRepository.instance.log(
+        jenis: RiwayatTransaksi.jenisImport,
+        jenisData: _labelPengungsi,
+        berhasil: true,
+        jumlahBaris: simpan.length,
+        keterangan: '${posko.label}: $tambah baru, $perbarui diperbarui',
+      );
+      return TransferResult(
+        TransferStatus.success,
+        '${simpan.length} baris diimpor ke ${posko.label}: '
+        '$tambah baru, $perbarui diperbarui.',
+      );
+    } catch (e) {
+      final pesan = e is FormatException ? e.message : '$e';
+      await RiwayatRepository.instance.log(
+        jenis: RiwayatTransaksi.jenisImport,
+        jenisData: _labelPengungsi,
+        berhasil: false,
+        keterangan: pesan,
+      );
+      return TransferResult(TransferStatus.failed, 'Import gagal: $pesan');
+    }
   }
 
-  // ================= LOGISTIK =================
-
-  static Future<TransferResult> exportLogistik() {
-    return _export<Logistik>(
-      jenisData: _labelLogistik,
-      filePrefix: 'logistik',
-      headers: Logistik.csvHeaders,
-      load: LogistikRepository.instance.getAll,
-      toRow: (e) => e.toCsvRow(),
-    );
-  }
-
-  /// [defaultPosko]: lihat penjelasan di importPengungsi.
-  static Future<TransferResult> importLogistik({String? defaultPosko}) {
-    final posko = defaultPosko ?? SessionService.instance.posko;
-    return _import<Logistik>(
-      jenisData: _labelLogistik,
-      parse: (row) => Logistik.fromCsv(row, posko),
-      save: LogistikRepository.instance.addMany,
-    );
-  }
+  /// "Posko Balai Desa" -> "Posko_Balai_Desa" (aman untuk nama file).
+  static String _namaFile(String nama) =>
+      nama.trim().replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
 
   // ================= PROSES UMUM =================
 
@@ -123,57 +196,6 @@ class TransferService {
         keterangan: '$e',
       );
       return TransferResult(TransferStatus.failed, 'Ekspor gagal: $e');
-    }
-  }
-
-  static Future<TransferResult> _import<T>({
-    required String jenisData,
-    required T? Function(Map<String, String> row) parse,
-    required Future<void> Function(List<T> items) save,
-  }) async {
-    try {
-      final file = await FileService.pickCsv();
-      if (file == null) {
-        return const TransferResult(
-            TransferStatus.cancelled, 'Import dibatalkan.');
-      }
-
-      final rows = CsvService.decode(file.content);
-      if (rows.isEmpty) {
-        throw const FormatException('File CSV kosong.');
-      }
-
-      final items = rows.map(parse).whereType<T>().toList();
-      if (items.isEmpty) {
-        throw const FormatException(
-            'Tidak ada baris yang valid. Periksa nama kolom CSV.');
-      }
-
-      await save(items);
-
-      final dilewati = rows.length - items.length;
-      await RiwayatRepository.instance.log(
-        jenis: RiwayatTransaksi.jenisImport,
-        jenisData: jenisData,
-        berhasil: true,
-        jumlahBaris: items.length,
-        keterangan: dilewati > 0 ? '$dilewati baris dilewati' : '',
-      );
-
-      final extra = dilewati > 0 ? ' ($dilewati baris tidak valid dilewati)' : '';
-      return TransferResult(
-        TransferStatus.success,
-        '${items.length} baris berhasil diimpor$extra.',
-      );
-    } catch (e) {
-      final pesan = e is FormatException ? e.message : '$e';
-      await RiwayatRepository.instance.log(
-        jenis: RiwayatTransaksi.jenisImport,
-        jenisData: jenisData,
-        berhasil: false,
-        keterangan: pesan,
-      );
-      return TransferResult(TransferStatus.failed, 'Import gagal: $pesan');
     }
   }
 }

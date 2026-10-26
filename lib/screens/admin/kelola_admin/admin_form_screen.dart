@@ -200,11 +200,11 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                 isRequired: !_isEdit,
                 hint: _isEdit
                     ? 'Kosongkan jika tidak diganti'
-                    : 'Minimal 6 karakter',
+                    : 'Minimal 8 karakter, huruf dan angka',
                 controller: _password,
                 obscureText: _sembunyikan,
                 validator:
-                    _isEdit ? Validators.passwordOptional : Validators.password,
+                    _isEdit ? Validators.passwordBaruOptional : Validators.passwordBaru,
                 sideAction: tombolLihat,
               ),
               const SizedBox(height: 16),

@@ -1,7 +1,7 @@
 // ============================================================
 // beranda_screen.dart
 // HALAMAN BERANDA RELAWAN:
-// sapaan, info posko, ringkasan data, dan menu utama.
+// sapaan, info posko, ringkasan data, status bantuan posko, menu utama.
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -10,6 +10,8 @@ import '../../../core/app_constants.dart';
 import '../../../data/data_events.dart';
 import '../../../data/repositories/logistik_repository.dart';
 import '../../../data/repositories/pengungsi_repository.dart';
+import '../../../data/repositories/posko_repository.dart';
+import '../../../services/ringkasan_posko_service.dart';
 import '../../../services/session_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
@@ -18,7 +20,10 @@ import '../../../widgets/app_logo.dart';
 import '../../../widgets/menu_card.dart';
 import '../../../widgets/offline_badge.dart';
 import '../../../widgets/stat_card.dart';
+import '../../../widgets/status_bantuan_widgets.dart';
 import '../../../widgets/theme_toggle_button.dart';
+import '../../../services/perangkat_service.dart';
+import '../../ringkasan/ringkasan_posko_screen.dart';
 
 class BerandaScreen extends StatefulWidget {
   /// Dipanggil saat kartu menu diketuk (1=Pengungsi, 2=Logistik, 3=Riwayat).
@@ -33,6 +38,7 @@ class BerandaScreen extends StatefulWidget {
 class _BerandaScreenState extends State<BerandaScreen> {
   int? _jumlahPengungsi;
   int? _jumlahLogistik;
+  RingkasanPosko? _ringkasan;
 
   @override
   void initState() {
@@ -48,13 +54,34 @@ class _BerandaScreenState extends State<BerandaScreen> {
   }
 
   Future<void> _load() async {
-    final pengungsi = await PengungsiRepository.instance.count();
-    final logistik = await LogistikRepository.instance.count();
+    final poskoId = SessionService.instance.poskoId;
+    final pengungsi = poskoId == null
+        ? 0
+        : await PengungsiRepository.instance.count(poskoId: poskoId);
+    // Jenis barang yang masih ada stoknya di posko ini.
+    final logistik = poskoId == null
+        ? 0
+        : (await LogistikRepository.instance.getStok(poskoId))
+            .where((s) => s.jumlah > 0)
+            .length;
+    final posko =
+        poskoId == null ? null : await PoskoRepository.instance.findById(poskoId);
+    final ringkasan =
+        posko == null ? null : await RingkasanPoskoService.muat(posko);
     if (!mounted) return;
     setState(() {
       _jumlahPengungsi = pengungsi;
       _jumlahLogistik = logistik;
+      _ringkasan = ringkasan;
     });
+  }
+
+  void _bukaRingkasan() {
+    final r = _ringkasan;
+    if (r == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => RingkasanPoskoScreen(posko: r.posko)),
+    );
   }
 
   String _angka(int? n, String satuan) => n == null ? '...' : '$n $satuan';
@@ -126,13 +153,34 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 child: StatCard(
                   icon: Icons.inventory_2_rounded,
                   iconColor: AppColors.accentAmber,
-                  label: 'Data Logistik',
-                  value: _angka(_jumlahLogistik, 'Data'),
+                  label: 'Barang tersedia',
+                  value: _angka(_jumlahLogistik, 'Jenis'),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
+
+          // ---- Status bantuan posko (hanya saat beroperasi) ----
+          if (_ringkasan?.posko.isBeroperasi ?? false) ...[
+            KartuStatusBantuan(ringkasan: _ringkasan!, onTap: _bukaRingkasan),
+            const SizedBox(height: 16),
+            Text('TUGAS HARI INI', style: AppTextStyles.label(p)),
+            const SizedBox(height: 10),
+            DaftarTugas(tugas: _ringkasan!.tugas, batas: 3),
+            if (_ringkasan!.tugas.length > 3)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: _bukaRingkasan,
+                  child: Text(
+                    'Lihat semua (${_ringkasan!.tugas.length} tugas)',
+                    style: const TextStyle(color: AppColors.primary),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+          ],
 
           // ---- Menu ----
           MenuCard(
@@ -147,17 +195,41 @@ class _BerandaScreenState extends State<BerandaScreen> {
             icon: Icons.inventory_2_rounded,
             iconColor: AppColors.accentAmber,
             title: 'DATA LOGISTIK',
-            description: 'Catat dan kelola data logistik',
+            description: 'Catat barang masuk & keluar, lihat stok',
             onTap: () => widget.onOpenMenu(2),
           ),
-          const SizedBox(height: 12),
-          MenuCard(
-            icon: Icons.history_rounded,
-            iconColor: AppColors.accentBlue,
-            title: 'RIWAYAT TRANSAKSI',
-            description: 'Lihat riwayat import dan export data',
-            onTap: () => widget.onOpenMenu(3),
-          ),
+          // HP Anggota: relawan mengirim/menerima data ke/dari HP Induk.
+          if (PerangkatService.isAnggota) ...[
+            const SizedBox(height: 12),
+            MenuCard(
+              icon: Icons.sync_alt_rounded,
+              iconColor: AppColors.accentBlue,
+              title: 'SINKRON DENGAN HP INDUK',
+              description: 'Kirim & terima data lewat Bluetooth / Quick Share',
+              onTap: () => widget.onOpenMenu(3),
+            ),
+          ],
+          if (_ringkasan != null) ...[
+            const SizedBox(height: 12),
+            MenuCard(
+              icon: Icons.health_and_safety_rounded,
+              iconColor: AppColors.success,
+              title: 'KEBUTUHAN & KOMPOSISI',
+              description: 'Kebutuhan bantuan, komposisi, perhatian medis',
+              onTap: _bukaRingkasan,
+            ),
+          ],
+          // Di HP Anggota tab ke-4 adalah Sinkron (kartu di atas).
+          if (!PerangkatService.isAnggota) ...[
+            const SizedBox(height: 12),
+            MenuCard(
+              icon: Icons.history_rounded,
+              iconColor: AppColors.accentBlue,
+              title: 'RIWAYAT TRANSAKSI',
+              description: 'Lihat riwayat import dan export data',
+              onTap: () => widget.onOpenMenu(3),
+            ),
+          ],
           const SizedBox(height: 16),
         ],
       ),

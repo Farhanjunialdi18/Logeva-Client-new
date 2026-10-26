@@ -7,26 +7,56 @@
 class DataOptions {
   DataOptions._();
 
-  // ---- Pengungsi ----
-  static const List<String> kondisiPengungsi = [
-    'Sehat',
-    'Sakit Ringan',
-    'Perlu Perawatan',
+  // ---- Pengungsi (nilai sama persis dengan website) ----
+  static const String lakiLaki = 'Laki-laki';
+  static const String perempuan = 'Perempuan';
+  static const List<String> jenisKelamin = [lakiLaki, perempuan];
+
+  /// Kondisi kesehatan = teks bebas; kosong berarti 'Sehat'.
+  static const String kondisiSehat = 'Sehat';
+
+  static const String bukanRentan = 'Tidak';
+  static const List<String> kelompokRentan = [
+    bukanRentan,
     'Ibu Hamil',
+    'Lansia',
+    'Bayi',
     'Disabilitas',
+    'Sakit',
   ];
 
-  // ---- Logistik ----
+  // ---- Logistik (nilai sama persis dengan website) ----
   static const String semuaKategori = 'Semua Kategori';
 
+  /// Kategori bawaan website, urutan = id 1–10 (KategoriLogistikSeeder).
   static const List<String> kategoriLogistik = [
     'Makanan',
     'Minuman',
-    'Perlengkapan',
-    'Obat-obatan',
     'Pakaian',
+    'Perlengkapan Tidur',
+    'Kebersihan',
+    'Medis',
+    'Bayi & Anak',
+    'Dapur Umum',
+    'Sanitasi',
     'Lainnya',
   ];
+
+  /// Master barang bawaan website: (nama, id kategori, satuan,
+  /// kebutuhan per orang per hari).
+  static const List<(String, int, String, double)> barangAwal = [
+    ('Beras', 1, 'kg', 0.3),
+    ('Air Mineral', 2, 'liter', 3),
+  ];
+
+  /// Untuk apa barang dikeluarkan (StokKeluar::TUJUAN): kunci -> label.
+  static const Map<String, String> tujuanKeluar = {
+    'dibagikan': 'Dibagikan ke pengungsi',
+    'dapur_umum': 'Dimasak di dapur umum',
+    'dikirim': 'Dikirim ke posko lain',
+    'rusak': 'Rusak / kedaluwarsa / hilang',
+    'lainnya': 'Lainnya',
+  };
 
   // ---- Akun admin & relawan ----
   static const String roleSuperAdmin = 'Super Admin';
@@ -37,14 +67,17 @@ class DataOptions {
   static const String statusNonaktif = 'Nonaktif';
   static const List<String> statusAkun = [statusAktif, statusNonaktif];
 
+  /// Saran satuan (huruf kecil seperti di website). Satuan lain boleh.
   static const List<String> satuanLogistik = [
-    'Dus',
-    'Kg',
-    'Buah',
-    'Pcs',
-    'Liter',
-    'Karung',
-    'Paket',
-    'Lembar',
+    'kg',
+    'liter',
+    'dus',
+    'karung',
+    'paket',
+    'buah',
+    'pcs',
+    'botol',
+    'bungkus',
+    'lembar',
   ];
 }

@@ -205,7 +205,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
                   onPressed: () => _hapus(admin),
                 ),
               ] else
-                Text(AdminRules.pesanBukanSuperAdmin,
+                Text(AdminRules.pesanTidakBoleh,
                     style: AppTextStyles.small(p)),
             ],
             const SizedBox(height: 16),

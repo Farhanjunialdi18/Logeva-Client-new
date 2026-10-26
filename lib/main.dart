@@ -5,12 +5,17 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'routes/app_routes.dart';
+import 'services/perangkat_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Peran HP (Induk/Anggota) dibaca sekali saat aplikasi dibuka.
+  await PerangkatService.muat();
   runApp(const LogevaApp());
 }
 
@@ -29,6 +34,11 @@ class LogevaApp extends StatelessWidget {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: mode,
+          // Bahasa Indonesia untuk widget bawaan (kalender, tombol dialog):
+          // tanggal tampil & diketik sebagai hari/bulan/tahun.
+          locale: const Locale('id', 'ID'),
+          supportedLocales: const [Locale('id', 'ID')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
           initialRoute: AppRoutes.roleSelection,
           routes: AppRoutes.routes,
         );

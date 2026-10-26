@@ -9,6 +9,7 @@ import 'model_utils.dart';
 
 class Admin {
   final int? id;
+  final String kode; // kode unik akun (kosong = dibuatkan repository)
   final String nama;
   final String username;
   final String email;
@@ -17,9 +18,11 @@ class Admin {
   final String role; // 'Super Admin' / 'Admin'
   final String status; // 'Aktif' / 'Nonaktif'
   final DateTime dibuatPada;
+  final DateTime diubahPada;
 
   const Admin({
     this.id,
+    this.kode = '',
     required this.nama,
     required this.username,
     required this.email,
@@ -28,12 +31,15 @@ class Admin {
     this.role = DataOptions.roleAdmin,
     this.status = DataOptions.statusAktif,
     required this.dibuatPada,
-  });
+    DateTime? diubahPada,
+  }) : diubahPada = diubahPada ?? dibuatPada;
 
   bool get isAktif => status == DataOptions.statusAktif;
   bool get isSuperAdmin => role == DataOptions.roleSuperAdmin;
 
   Admin copyWith({
+    String? kode,
+    DateTime? diubahPada,
     String? nama,
     String? username,
     String? email,
@@ -44,6 +50,7 @@ class Admin {
   }) {
     return Admin(
       id: id,
+      kode: kode ?? this.kode,
       nama: nama ?? this.nama,
       username: username ?? this.username,
       email: email ?? this.email,
@@ -52,11 +59,13 @@ class Admin {
       role: role ?? this.role,
       status: status ?? this.status,
       dibuatPada: dibuatPada,
+      diubahPada: diubahPada ?? this.diubahPada,
     );
   }
 
   Map<String, Object?> toMap() => {
         'id': id,
+        'kode': kode,
         'nama': nama,
         'username': username,
         'email': email,
@@ -65,10 +74,12 @@ class Admin {
         'role': role,
         'status': status,
         'dibuat_pada': dibuatPada.toIso8601String(),
+        'diubah_pada': diubahPada.toIso8601String(),
       };
 
   factory Admin.fromMap(Map<String, Object?> map) => Admin(
         id: asInt(map['id']),
+        kode: asText(map['kode']),
         nama: asText(map['nama']),
         username: asText(map['username']),
         email: asText(map['email']),
@@ -81,5 +92,6 @@ class Admin {
             ? DataOptions.statusNonaktif
             : DataOptions.statusAktif,
         dibuatPada: asDate(map['dibuat_pada']),
+        diubahPada: asDateOrNull(map['diubah_pada']) ?? asDate(map['dibuat_pada']),
       );
 }

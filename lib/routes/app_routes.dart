@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 
 import '../screens/admin/admin_shell_screen.dart';
 import '../screens/admin_login/admin_login_screen.dart';
+import '../screens/admin_login/ganti_password_wajib_screen.dart';
+import '../screens/penyiapan/terima_penyiapan_screen.dart';
 import '../screens/relawan/relawan_shell_screen.dart';
 import '../screens/relawan_login/relawan_login_screen.dart';
 import '../screens/role_selection/role_selection_screen.dart';
@@ -19,6 +21,8 @@ class AppRoutes {
   static const String relawanLogin = '/relawan-login';
   static const String adminDashboard = '/admin-dashboard';
   static const String relawanHome = '/relawan-home';
+  static const String gantiPasswordWajib = '/ganti-password-wajib';
+  static const String terimaPenyiapan = '/terima-penyiapan';
 
   static Map<String, WidgetBuilder> get routes => {
         roleSelection: (_) => const RoleSelectionScreen(),
@@ -26,5 +30,7 @@ class AppRoutes {
         relawanLogin: (_) => const RelawanLoginScreen(),
         adminDashboard: (_) => const AdminShellScreen(),
         relawanHome: (_) => const RelawanShellScreen(),
+        gantiPasswordWajib: (_) => const GantiPasswordWajibScreen(),
+        terimaPenyiapan: (_) => const TerimaPenyiapanScreen(),
       };
 }

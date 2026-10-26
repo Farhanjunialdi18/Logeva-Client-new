@@ -15,7 +15,8 @@ import 'table_store.dart';
 class LocalDatabase {
   LocalDatabase._();
 
-  static final TableStore store = kIsWeb
+  /// Hanya diganti oleh tes tampilan (sebelum repository pertama dipakai).
+  static TableStore store = kIsWeb
       ? MemoryTableStore(seed: DemoData.seed())
       : SqliteTableStore();
 }

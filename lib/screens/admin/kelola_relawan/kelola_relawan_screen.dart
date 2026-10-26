@@ -19,6 +19,8 @@ import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/search_field.dart';
 import '../../../widgets/summary_card.dart';
+import '../../../services/perangkat_service.dart';
+import '../../../widgets/dikelola_induk_banner.dart';
 import 'relawan_akun_detail_screen.dart';
 import 'relawan_akun_form_screen.dart';
 
@@ -124,7 +126,10 @@ class _KelolaRelawanScreenState extends State<KelolaRelawanScreen> {
           ),
           const SizedBox(height: 16),
 
-          PrimaryButton(text: '+ TAMBAH RELAWAN', onPressed: _tambah),
+          if (PerangkatService.isAnggota)
+            const DikelolaIndukBanner()
+          else
+            PrimaryButton(text: '+ TAMBAH RELAWAN', onPressed: _tambah),
           const SizedBox(height: 14),
 
           SearchField(

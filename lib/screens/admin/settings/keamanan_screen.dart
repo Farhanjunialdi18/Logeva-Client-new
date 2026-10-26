@@ -11,10 +11,11 @@ import '../../../services/session_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/app_snackbar.dart';
-import '../../../utils/password_hasher.dart';
 import '../../../utils/validators.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/app_text_field.dart';
+import '../../../services/perangkat_service.dart';
+import '../../../widgets/dikelola_induk_banner.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/square_icon_button.dart';
@@ -59,21 +60,12 @@ class _KeamananScreenState extends State<KeamananScreen> {
     final admin = id == null ? null : await AdminRepository.instance.findById(id);
     if (admin == null) return _gagal('Data akun tidak ditemukan. Login ulang.');
 
-    final cocok = PasswordHasher.verify(
-      _lama.text,
-      hash: admin.passwordHash,
-      salt: admin.passwordSalt,
-    );
-    if (!cocok) return _gagal('Password lama salah.');
-    if (_baru.text == _lama.text) {
-      return _gagal('Password baru harus berbeda dari password lama.');
-    }
+    final error = await AdminRepository.instance
+        .gantiPassword(admin, _baru.text, lama: _lama.text);
+    if (error != null) return _gagal(error);
 
-    final hasil = await AdminRepository.instance.update(
-      admin,
-      newPassword: _baru.text,
-    );
-    SessionService.instance.startAdmin(hasil);
+    final hasil = await AdminRepository.instance.findById(admin.id!);
+    if (hasil != null) SessionService.instance.startAdmin(hasil);
 
     if (!mounted) return;
     AppSnackbar.show(context, 'Password berhasil diganti.');
@@ -121,10 +113,10 @@ class _KeamananScreenState extends State<KeamananScreen> {
               AppTextField(
                 label: 'Password Baru',
                 isRequired: true,
-                hint: 'Minimal 6 karakter',
+                hint: 'Minimal 8 karakter, huruf dan angka',
                 controller: _baru,
                 obscureText: _sembunyikan,
-                validator: Validators.password,
+                validator: Validators.passwordBaru,
               ),
               const SizedBox(height: 16),
 
@@ -156,11 +148,15 @@ class _KeamananScreenState extends State<KeamananScreen> {
               ),
               const SizedBox(height: 24),
 
-              PrimaryButton(
-                text: 'GANTI PASSWORD',
-                isLoading: _saving,
-                onPressed: _simpan,
-              ),
+              // Password admin dikelola di HP Induk, lalu ikut sinkron.
+              if (PerangkatService.isAnggota)
+                const DikelolaIndukBanner()
+              else
+                PrimaryButton(
+                  text: 'GANTI PASSWORD',
+                  isLoading: _saving,
+                  onPressed: _simpan,
+                ),
               const SizedBox(height: 24),
             ],
           ),

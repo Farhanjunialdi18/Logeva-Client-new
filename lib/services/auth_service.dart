@@ -9,6 +9,7 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 
 import '../data/repositories/admin_repository.dart';
+import '../data/repositories/posko_repository.dart';
 import '../data/repositories/relawan_repository.dart';
 import '../models/relawan_session.dart';
 import '../utils/password_hasher.dart';
@@ -18,7 +19,15 @@ class AuthResult {
   final bool success;
   final String message;
 
-  const AuthResult({required this.success, required this.message});
+  /// true = login berhasil tapi password masih bawaan: wajib diganti
+  /// dulu sebelum masuk ke aplikasi.
+  final bool wajibGantiPassword;
+
+  const AuthResult({
+    required this.success,
+    required this.message,
+    this.wajibGantiPassword = false,
+  });
 }
 
 class AuthService {
@@ -63,7 +72,11 @@ class AuthService {
     }
 
     SessionService.instance.startAdmin(admin);
-    return const AuthResult(success: true, message: 'Login berhasil.');
+    return AuthResult(
+      success: true,
+      message: 'Login berhasil.',
+      wajibGantiPassword: AdminRepository.instance.masihPasswordBawaan(admin),
+    );
   }
 
   /// Login relawan pakai PIN 6 digit dari admin.
@@ -85,7 +98,11 @@ class AuthService {
       }
       await RelawanRepository.instance.markLogin(relawan);
       SessionService.instance.startRelawan(
-        RelawanSession(nama: relawan.nama, posko: relawan.posko),
+        RelawanSession(
+          nama: relawan.nama,
+          poskoId: relawan.poskoId,
+          posko: relawan.posko,
+        ),
       );
       return const AuthResult(success: true, message: 'PIN terverifikasi.');
     }
@@ -93,7 +110,13 @@ class AuthService {
     // PIN demo (lihat penjelasan di atas).
     final belumAdaRelawan = await RelawanRepository.instance.count() == 0;
     if (kDebugMode && belumAdaRelawan && pin == demoRelawanPin) {
-      SessionService.instance.startRelawan(demoRelawan);
+      // Pakai posko demo kalau ada di database, supaya data bisa dicatat.
+      final posko = await PoskoRepository.instance.findByNama(demoRelawan.posko);
+      SessionService.instance.startRelawan(RelawanSession(
+        nama: demoRelawan.nama,
+        poskoId: posko?.id,
+        posko: demoRelawan.posko,
+      ));
       return const AuthResult(success: true, message: 'PIN demo terverifikasi.');
     }
 

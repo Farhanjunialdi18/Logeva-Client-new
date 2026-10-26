@@ -1,6 +1,7 @@
 // ============================================================
 // relawan_bottom_nav.dart
 // Menu bawah relawan: Beranda, Pengungsi, Logistik, Riwayat, Logout.
+// Di HP Anggota, Riwayat diganti Sinkron (kegiatan rutin relawan).
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -22,18 +23,29 @@ class RelawanBottomNav extends StatelessWidget {
     NavItem(Icons.logout_rounded, 'Logout'),
   ];
 
+  static const List<NavItem> itemsAnggota = [
+    NavItem(Icons.home_rounded, 'Beranda'),
+    NavItem(Icons.groups_rounded, 'Pengungsi'),
+    NavItem(Icons.inventory_2_rounded, 'Logistik'),
+    NavItem(Icons.sync_alt_rounded, 'Sinkron'),
+    NavItem(Icons.logout_rounded, 'Logout'),
+  ];
+
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final bool hpAnggota;
 
   const RelawanBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.hpAnggota = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
+    final daftar = hpAnggota ? itemsAnggota : items;
 
     return Container(
       decoration: BoxDecoration(
@@ -46,10 +58,10 @@ class RelawanBottomNav extends StatelessWidget {
           height: 68,
           child: Row(
             children: [
-              for (var i = 0; i < items.length; i++)
+              for (var i = 0; i < daftar.length; i++)
                 Expanded(
                   child: _NavButton(
-                    item: items[i],
+                    item: daftar[i],
                     active: i == currentIndex,
                     onTap: () => onTap(i),
                   ),

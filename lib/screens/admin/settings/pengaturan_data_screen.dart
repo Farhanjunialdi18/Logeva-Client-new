@@ -6,10 +6,10 @@
 
 import 'package:flutter/material.dart';
 
-import '../../../models/logistik.dart';
-import '../../../models/pengungsi.dart';
 import '../../../services/csv_service.dart';
 import '../../../services/file_service.dart';
+import '../../../services/master_barang_csv.dart';
+import '../../../services/pengungsi_csv.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/app_snackbar.dart';
@@ -130,24 +130,27 @@ class _PengaturanDataScreenState extends State<PengaturanDataScreen> {
                 'Export': 'Pemisah koma ( , )',
                 'Import': 'Koma ( , ) atau titik koma ( ; )',
                 'Encoding': 'UTF-8',
-                'Format tanggal': 'ISO 8601 (2026-10-06T15:42:00)',
-                'Jenis kelamin': 'L / P',
+                'Tanggal lahir': 'TAHUN-BULAN-TANGGAL (1990-07-25)',
+                'Jenis kelamin': 'Laki-laki / Perempuan',
+                'Kelompok rentan': 'Tidak, Ibu Hamil, Lansia, Bayi, '
+                    'Disabilitas, Sakit',
               },
-              note: 'Baris pertama file harus berisi nama kolom. Baris yang '
-                  'nama atau angkanya kosong akan dilewati saat import.',
+              note: 'Baris pertama file harus berisi nama kolom. File '
+                  'pengungsi berlaku untuk satu posko. Kalau ada baris yang '
+                  'salah, tidak ada data yang disimpan (sama dengan website).',
             ),
             const SizedBox(height: 14),
 
             _formatCard(
               judul: 'DATA PENGUNGSI',
-              headers: Pengungsi.csvHeaders,
+              headers: PengungsiCsv.headers,
               fileName: 'template_pengungsi.csv',
             ),
             const SizedBox(height: 14),
             _formatCard(
-              judul: 'DATA LOGISTIK',
-              headers: Logistik.csvHeaders,
-              fileName: 'template_logistik.csv',
+              judul: 'MASTER BARANG',
+              headers: MasterBarangCsv.headers,
+              fileName: 'template_master_barang.csv',
             ),
             const SizedBox(height: 14),
 

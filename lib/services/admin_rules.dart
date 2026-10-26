@@ -5,12 +5,14 @@
 //  1. Hanya Super Admin yang boleh menambah/mengubah/menghapus admin.
 //  2. Admin tidak boleh menonaktifkan atau menghapus akunnya sendiri.
 //  3. Minimal harus selalu ada 1 Super Admin yang aktif.
+//  4. Di HP Anggota akun admin tidak bisa diubah (dikelola di HP Induk).
 // Setiap fungsi mengembalikan PESAN ERROR, atau null kalau boleh.
 // ============================================================
 
 import '../core/data_options.dart';
 import '../data/repositories/admin_repository.dart';
 import '../models/admin.dart';
+import 'perangkat_service.dart';
 import 'session_service.dart';
 
 class AdminRules {
@@ -19,7 +21,13 @@ class AdminRules {
   static Admin? get _me => SessionService.instance.admin;
 
   /// Apakah admin yang sedang login boleh mengelola akun admin?
-  static bool get bolehKelola => _me?.isSuperAdmin ?? false;
+  static bool get bolehKelola =>
+      (_me?.isSuperAdmin ?? false) && !PerangkatService.isAnggota;
+
+  /// Pesan saat tombol kelola admin disembunyikan.
+  static String get pesanTidakBoleh => PerangkatService.isAnggota
+      ? PerangkatService.pesanDikelolaInduk
+      : pesanBukanSuperAdmin;
 
   static const String pesanBukanSuperAdmin =
       'Hanya Super Admin yang dapat mengelola akun admin.';
@@ -30,7 +38,7 @@ class AdminRules {
     required String roleBaru,
     required String statusBaru,
   }) async {
-    if (!bolehKelola) return pesanBukanSuperAdmin;
+    if (!bolehKelola) return pesanTidakBoleh;
 
     final akunSendiri = target.id != null && target.id == _me?.id;
     if (akunSendiri && statusBaru == DataOptions.statusNonaktif) {
@@ -50,7 +58,7 @@ class AdminRules {
 
   /// Cek sebelum menghapus admin [target].
   static Future<String?> cekHapus(Admin target) async {
-    if (!bolehKelola) return pesanBukanSuperAdmin;
+    if (!bolehKelola) return pesanTidakBoleh;
     if (target.id == _me?.id) return 'Anda tidak bisa menghapus akun sendiri.';
     if (target.isSuperAdmin &&
         target.isAktif &&

@@ -1,7 +1,8 @@
 // ============================================================
 // admin_pengungsi_screen.dart
 // DATA PENGUNGSI versi ADMIN: seluruh posko.
-// Total, cari, filter posko & kondisi, daftar kartu, import/export CSV.
+// Total, cari, filter posko & kelompok rentan, daftar kartu,
+// import/export CSV (per posko, sama dengan website).
 // Ketuk kartu -> panel detail (EDIT / HAPUS) milik halaman relawan.
 // ============================================================
 
@@ -12,7 +13,11 @@ import '../../../data/data_events.dart';
 import '../../../data/repositories/pengungsi_repository.dart';
 import '../../../data/repositories/posko_repository.dart';
 import '../../../models/pengungsi.dart';
+import '../../../models/posko.dart';
+import '../../../services/dobel_service.dart';
+import '../../../services/perangkat_service.dart';
 import '../../../services/transfer_service.dart';
+import '../../../utils/app_snackbar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/account_tile.dart';
 import '../../../widgets/app_background.dart';
@@ -24,6 +29,7 @@ import '../../../widgets/secondary_button.dart';
 import '../../../widgets/summary_card.dart';
 import '../../../widgets/transfer_result_dialog.dart';
 import '../../relawan/pengungsi/pengungsi_detail_sheet.dart';
+import 'pengungsi_dobel_screen.dart';
 
 class AdminPengungsiScreen extends StatefulWidget {
   const AdminPengungsiScreen({super.key});
@@ -34,14 +40,16 @@ class AdminPengungsiScreen extends StatefulWidget {
 
 class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
   static const String _semuaPosko = 'Semua Posko';
-  static const String _semuaKondisi = 'Semua Kondisi';
+  static const String _semuaRentan = 'Semua Kelompok';
+  static const String _tanpaPosko = 'Tanpa posko';
 
   List<Pengungsi> _semua = [];
-  List<String> _daftarPosko = [];
+  int _dobel = 0; // grup kemungkinan dobel (HP Induk)
+  List<Posko> _daftarPosko = [];
   bool _loading = true;
   String _kataCari = '';
   String _filterPosko = _semuaPosko;
-  String _filterKondisi = _semuaKondisi;
+  String _filterRentan = _semuaRentan;
   bool _importing = false;
   bool _exporting = false;
 
@@ -60,45 +68,67 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
 
   Future<void> _load() async {
     final data = await PengungsiRepository.instance.getAll();
-    final posko = {
-      ...await PoskoRepository.instance.getNames(),
-      ...data.map((e) => e.posko).where((n) => n.isNotEmpty),
-    }.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final posko = await PoskoRepository.instance.getAll()
+      ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+    // Orang yang sama dari beberapa HP diputuskan supervisor di HP Induk.
+    final dobel = PerangkatService.isAnggota ? 0 : await DobelService.jumlah();
 
     if (!mounted) return;
     setState(() {
+      _dobel = dobel;
       _semua = data;
       _daftarPosko = posko;
       _loading = false;
     });
   }
 
-  List<String> get _pilihanKondisi => {
-        _semuaKondisi,
-        ...DataOptions.kondisiPengungsi,
-        ..._semua.map((e) => e.kondisi).where((k) => k.isNotEmpty),
-      }.toList();
+  /// Posko yang dipilih di filter (null = Semua Posko / Tanpa posko).
+  Posko? get _poskoTerpilih {
+    for (final p in _daftarPosko) {
+      if (p.nama == _filterPosko) return p;
+    }
+    return null;
+  }
+
+  bool get _adaTanpaPosko => _semua.any((e) => e.poskoId == null);
 
   List<Pengungsi> get _hasilFilter {
     final q = _kataCari.trim().toLowerCase();
+    final posko = _poskoTerpilih;
     return _semua.where((e) {
-      final cocokPosko = _filterPosko == _semuaPosko || e.posko == _filterPosko;
-      final cocokKondisi =
-          _filterKondisi == _semuaKondisi || e.kondisi == _filterKondisi;
+      final cocokPosko = switch (_filterPosko) {
+        _semuaPosko => true,
+        _tanpaPosko => e.poskoId == null,
+        _ => e.poskoId == posko?.id,
+      };
+      final cocokRentan =
+          _filterRentan == _semuaRentan || e.kelompokRentan == _filterRentan;
       final cocokCari = q.isEmpty ||
           e.nama.toLowerCase().contains(q) ||
-          e.nik.contains(q);
-      return cocokPosko && cocokKondisi && cocokCari;
+          e.nomorKk.contains(q);
+      return cocokPosko && cocokRentan && cocokCari;
     }).toList();
   }
 
+  /// Import/export CSV selalu untuk SATU posko (sama dengan website).
+  Posko? _cekPosko() {
+    final posko = _poskoTerpilih;
+    if (posko == null) {
+      AppSnackbar.show(
+        context,
+        'Pilih satu posko di filter dulu: file CSV pengungsi berlaku '
+        'untuk satu posko.',
+        isError: true,
+      );
+    }
+    return posko;
+  }
+
   Future<void> _import() async {
+    final posko = _cekPosko();
+    if (posko == null) return;
     setState(() => _importing = true);
-    // Baris CSV tanpa kolom posko diisi posko yang sedang dipilih di filter.
-    final result = await TransferService.importPengungsi(
-      defaultPosko: _filterPosko == _semuaPosko ? '-' : _filterPosko,
-    );
+    final result = await TransferService.importPengungsi(posko);
     if (!mounted) return;
     setState(() => _importing = false);
     await TransferResultDialog.show(
@@ -110,8 +140,10 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
   }
 
   Future<void> _export() async {
+    final posko = _cekPosko();
+    if (posko == null) return;
     setState(() => _exporting = true);
-    final result = await TransferService.exportPengungsi();
+    final result = await TransferService.exportPengungsi(posko);
     if (!mounted) return;
     setState(() => _exporting = false);
     await TransferResultDialog.show(
@@ -127,7 +159,7 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
     final list = _hasilFilter;
     final adaFilter = _kataCari.isNotEmpty ||
         _filterPosko != _semuaPosko ||
-        _filterKondisi != _semuaKondisi;
+        _filterRentan != _semuaRentan;
 
     return Material(
       type: MaterialType.transparency,
@@ -146,6 +178,10 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
               value: _loading ? '...' : '${_semua.length} Orang',
             ),
             const SizedBox(height: 14),
+            if (_dobel > 0) ...[
+              KotakKemungkinanDobel(jumlah: _dobel),
+              const SizedBox(height: 14),
+            ],
 
             SearchField(
               hint: 'Cari nama pengungsi...',
@@ -158,7 +194,11 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
                 Expanded(
                   child: AppDropdownField(
                     value: _filterPosko,
-                    items: [_semuaPosko, ..._daftarPosko],
+                    items: [
+                      _semuaPosko,
+                      ..._daftarPosko.map((p) => p.nama),
+                      if (_adaTanpaPosko) _tanpaPosko,
+                    ],
                     onChanged: (v) =>
                         setState(() => _filterPosko = v ?? _semuaPosko),
                   ),
@@ -166,10 +206,10 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: AppDropdownField(
-                    value: _filterKondisi,
-                    items: _pilihanKondisi,
+                    value: _filterRentan,
+                    items: [_semuaRentan, ...DataOptions.kelompokRentan],
                     onChanged: (v) =>
-                        setState(() => _filterKondisi = v ?? _semuaKondisi),
+                        setState(() => _filterRentan = v ?? _semuaRentan),
                   ),
                 ),
               ],
@@ -193,10 +233,12 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
                 AccountTile(
                   icon: Icons.groups_rounded,
                   iconColor: AppColors.accentPurple,
-                  title: e.nama,
+                  title: e.perluDilengkapi ? '⚠ ${e.nama}' : e.nama,
                   lines: [
-                    '${e.jenisKelaminLabel} • ${e.usia} tahun',
-                    '${e.kondisi} · ${e.posko}',
+                    '${e.jenisKelamin} • ${e.usia} tahun'
+                        '${e.isRentan ? ' • ${e.kelompokRentan}' : ''}',
+                    '${e.kondisiKesehatan} · '
+                        '${e.posko.isEmpty ? _tanpaPosko : e.posko}',
                   ],
                   onTap: () => PengungsiDetailSheet.show(context, e),
                 ),

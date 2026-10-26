@@ -59,7 +59,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if (result.success) {
       Navigator.pushNamedAndRemoveUntil(
         context,
-        AppRoutes.adminDashboard,
+        result.wajibGantiPassword
+            ? AppRoutes.gantiPasswordWajib
+            : AppRoutes.adminDashboard,
         (route) => false,
       );
     } else {

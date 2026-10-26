@@ -17,6 +17,8 @@ import '../../../widgets/app_text_field.dart';
 import '../../../widgets/empty_state.dart';
 import '../../../widgets/info_card.dart';
 import '../../../widgets/initials_avatar.dart';
+import '../../../services/perangkat_service.dart';
+import '../../../widgets/dikelola_induk_banner.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
 
@@ -173,11 +175,14 @@ class _ProfilAdminScreenState extends State<ProfilAdminScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                PrimaryButton(
-                  text: 'SIMPAN PROFIL',
-                  isLoading: _saving,
-                  onPressed: _simpan,
-                ),
+                if (PerangkatService.isAnggota)
+                  const DikelolaIndukBanner()
+                else
+                  PrimaryButton(
+                    text: 'SIMPAN PROFIL',
+                    isLoading: _saving,
+                    onPressed: _simpan,
+                  ),
               ],
               const SizedBox(height: 24),
             ],
