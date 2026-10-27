@@ -43,16 +43,20 @@ class PengungsiRepository {
         .toList();
   }
 
+  /// Semua pengungsi posko (termasuk yang sudah pulang/pindah/dirujuk).
   Future<List<Pengungsi>> getByPosko(int? poskoId) async =>
       (await getAll()).where((e) => e.poskoId == poskoId).toList();
 
-  /// Jumlah pengungsi (tanpa yang sudah dihapus).
-  /// [poskoId] diisi = hanya posko tersebut.
-  Future<int> count({int? poskoId}) async {
-    final semua = await getAll();
-    if (poskoId == null) return semua.length;
-    return semua.where((e) => e.poskoId == poskoId).length;
-  }
+  /// Hanya yang MASIH di posko: dasar kapasitas, kebutuhan, & komposisi.
+  /// [poskoId] null = semua posko.
+  Future<List<Pengungsi>> getDiPosko({int? poskoId}) async => (await getAll())
+      .where((e) => e.masihDiPosko && (poskoId == null || e.poskoId == poskoId))
+      .toList();
+
+  /// Jumlah pengungsi yang masih di posko (tanpa yang sudah dihapus,
+  /// pulang, pindah, atau dirujuk). [poskoId] diisi = hanya posko tersebut.
+  Future<int> count({int? poskoId}) async =>
+      (await getDiPosko(poskoId: poskoId)).length;
 
   /// Pengungsi yang dianggap ORANG YANG SAMA (aturan website): nama tanpa
   /// beda huruf besar/kecil + tanggal lahir sama, di posko yang sama.

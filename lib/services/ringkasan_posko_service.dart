@@ -40,8 +40,9 @@ class RingkasanPoskoService {
 
   static Future<RingkasanPosko> muat(Posko posko, {TableStore? store}) async {
     final s = store ?? LocalDatabase.store;
+    // Hanya yang masih di posko (bukan yang pulang/pindah/dirujuk).
     final pengungsi =
-        await PengungsiRepository.withStore(s).getByPosko(posko.id);
+        await PengungsiRepository.withStore(s).getDiPosko(poskoId: posko.id);
     final logistik = LogistikRepository.withStore(s);
     final stok = await logistik.getStok(posko.id, termasukPokok: true);
     final hariIni = WaktuWib.hariIni();

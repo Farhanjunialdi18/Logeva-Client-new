@@ -11,7 +11,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'secondary_button.dart';
 
-enum DetailAction { edit, hapus }
+enum DetailAction { edit, hapus, lainnya }
 
 class DetailSheet {
   DetailSheet._();
@@ -21,6 +21,9 @@ class DetailSheet {
     required String title,
     required Map<String, String> rows,
     String? catatan,
+    // Tombol tambahan di atas EDIT & HAPUS (misal "Catat keluar posko").
+    String? teksAksiLain,
+    IconData? ikonAksiLain,
   }) {
     final p = AppPalette.of(context);
 
@@ -72,6 +75,15 @@ class DetailSheet {
                   ),
                 ),
               const SizedBox(height: 20),
+              if (catatan == null && teksAksiLain != null) ...[
+                SecondaryButton(
+                  text: teksAksiLain,
+                  icon: ikonAksiLain ?? Icons.more_horiz,
+                  height: 50,
+                  onPressed: () => Navigator.of(ctx).pop(DetailAction.lainnya),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (catatan != null)
                 Text(catatan, style: AppTextStyles.small(p))
               else

@@ -321,6 +321,9 @@ class GabungPaketService {
       dibuatPada: WaktuWib.baca(r['dibuat_pada']) ?? diubah,
       diubahPada: diubah,
       dihapusPada: dihapus,
+      statusKeberadaan: Pengungsi.bacaKeberadaan(r['status_keberadaan']),
+      keluarPada: Tanggal.baca(r['keluar_pada']),
+      keteranganKeluar: r['keterangan_keluar'] ?? '',
     );
 
     if (ada == null) {

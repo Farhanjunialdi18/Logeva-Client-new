@@ -13,6 +13,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../core/data_options.dart';
 import '../../data/data_events.dart';
 import '../../data/repositories/posko_repository.dart';
 import '../../models/posko.dart';
@@ -24,8 +25,10 @@ import '../../widgets/app_background.dart';
 import '../../widgets/app_dropdown_field.dart';
 import '../../widgets/grafik.dart';
 import '../../widgets/page_header.dart';
+import '../../widgets/secondary_button.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_bantuan_widgets.dart';
+import '../laporan/laporan_harian_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   /// Diisi untuk relawan: dashboard dikunci ke posko ini.
@@ -115,6 +118,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 16),
             ],
+            SecondaryButton(
+              text: 'LAPORAN HARIAN (TEKS)',
+              icon: Icons.summarize_rounded,
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => LaporanHarianScreen(poskoId: _poskoId),
+              )),
+            ),
+            const SizedBox(height: 16),
             if (data == null)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 48),
@@ -252,6 +263,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ]),
       ),
       jarak,
+      if (d.jumlahKeluar > 0) ...[
+        KartuGrafik(
+          judul: 'Sudah Keluar dari Posko',
+          keterangan: '${d.jumlahKeluar} orang tidak lagi dihitung untuk '
+              'kapasitas & kebutuhan.',
+          child: GrafikBatang(items: [
+            for (final (st, warna) in [
+              (DataOptions.pulang, AppColors.success),
+              (DataOptions.pindah, AppColors.accentBlue),
+              (DataOptions.dirujuk, AppColors.error),
+            ])
+              if ((d.keluarPosko[st] ?? 0) > 0)
+                ItemGrafik(DataOptions.statusKeberadaan[st]!, d.keluarPosko[st]!, warna),
+          ]),
+        ),
+        jarak,
+      ],
 
       // ---- Tren 7 hari ----
       KartuGrafik(

@@ -36,6 +36,10 @@ import 'package:flutter_application_1/screens/relawan/pengungsi/pengungsi_form_s
 import 'package:flutter_application_1/screens/relawan/pengungsi/pengungsi_screen.dart';
 import 'package:flutter_application_1/screens/relawan/relawan_shell_screen.dart';
 import 'package:flutter_application_1/screens/dashboard/dashboard_screen.dart';
+import 'package:flutter_application_1/screens/cadangan/cadangan_screen.dart';
+import 'package:flutter_application_1/screens/laporan/laporan_harian_screen.dart';
+import 'package:flutter_application_1/screens/relawan/info/info_posko_screen.dart';
+import 'package:flutter_application_1/screens/relawan/pengungsi/catat_keluar_screen.dart';
 import 'package:flutter_application_1/screens/ringkasan/ringkasan_posko_screen.dart';
 import 'package:flutter_application_1/screens/admin/kelola_admin/kelola_admin_screen.dart';
 import 'package:flutter_application_1/screens/admin/kelola_relawan/kelola_relawan_screen.dart';
@@ -245,6 +249,63 @@ void main() {
           scrollable: find.byType(Scrollable).first);
       expect(find.text(judul), findsOneWidget, reason: judul);
     }
+    expect(tester.takeException(), isNull);
+  });
+
+  // ---------------- KESIAPAN LAPANGAN (27 Okt) ----------------
+  layar('Cadangan & pemulihan', () async => const CadanganScreen(), sebagaiAdmin: true);
+  layar('Pulihkan dari layar awal', () async => const CadanganScreen(dariLayarAwal: true));
+  layar('Laporan harian semua posko', () async => const LaporanHarianScreen(),
+      sebagaiAdmin: true);
+  layar('Laporan harian satu posko', () async => const LaporanHarianScreen(poskoId: 1));
+  layar('Info posko & akun relawan', () async => const InfoPoskoScreen(poskoId: 1));
+  layar('Catat keluar posko', () async {
+    final e = (await PengungsiRepository.instance.getByPosko(1)).first;
+    return CatatKeluarScreen(pengungsi: e);
+  });
+
+  testWidgets('filter pengungsi & status keluar posko tampil rapi', (tester) async {
+    // Data demo bersama: satu pengungsi dirujuk, dikembalikan di akhir tes.
+    final repo = PengungsiRepository.instance;
+    final asli = (await tester.runAsync(() => repo.getByPosko(1)))!.first;
+    await tester.runAsync(() => repo.update(asli.catatKeluar(DataOptions.dirujuk,
+        DateTime(2026, 10, 26), 'RSUD Pandeglang dengan nama yang cukup panjang')));
+    addTearDown(() => tester.runAsync(() => repo.update(asli)));
+
+    SessionService.instance.startRelawan(relawan);
+    for (final (gelap, skala) in [(false, 1.0), (true, 1.3)]) {
+      await cek(tester, PengungsiScreen(onBack: () {}), gelap: gelap, skalaTeks: skala);
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));
+      await tester.pumpAndSettle();
+      expect(find.text('Pengungsi di Posko'), findsOneWidget);
+      expect(find.textContaining('orang sudah keluar posko'), findsOneWidget);
+
+      await tester.tap(find.text('Keluar'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('↗ '), findsNWidgets(2),
+          reason: 'baris yang keluar ditandai + keterangan tanda');
+
+      // Panel bisa masih terbuka dari putaran sebelumnya (state tetap).
+      if (find.text('KELOMPOK RENTAN').evaluate().isEmpty) {
+        await tester.tap(find.text('Filter lanjutan'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('KELOMPOK RENTAN'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+
+    SessionService.instance.startAdmin(admin);
+    await cek(tester, const AdminPengungsiScreen(), gelap: true, skalaTeks: 1.3);
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));
+    await tester.pumpAndSettle();
+    expect(find.text('Filter lanjutan'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await cek(tester, const DashboardScreen(), gelap: true, skalaTeks: 1.3);
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 200)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Sudah Keluar dari Posko'), 300,
+        scrollable: find.byType(Scrollable).first);
     expect(tester.takeException(), isNull);
   });
 

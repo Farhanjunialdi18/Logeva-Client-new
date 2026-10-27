@@ -47,6 +47,9 @@ class PengaturanRepository {
 
   Future<String>? _kodePerangkat;
 
+  /// Setelah data dipulihkan dari cadangan: baca ulang kode perangkat.
+  void lupakanCache() => _kodePerangkat = null;
+
   /// UUID tetap untuk instalasi aplikasi ini. Dibuat sekali saat pertama
   /// kali dibutuhkan, lalu selalu sama (sampai aplikasi dihapus dari HP).
   Future<String> kodePerangkat() async {

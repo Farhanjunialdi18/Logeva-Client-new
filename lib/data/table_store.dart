@@ -19,4 +19,9 @@ abstract class TableStore {
   Future<void> update(String table, int id, Map<String, Object?> values);
 
   Future<void> delete(String table, int id);
+
+  /// Mengganti SELURUH isi tabel-tabel di [isi] (id ikut dipertahankan)
+  /// dalam satu transaksi: gagal di tengah = tidak ada yang berubah.
+  /// Dipakai untuk memulihkan cadangan.
+  Future<void> gantiSemua(Map<String, List<Map<String, Object?>>> isi);
 }

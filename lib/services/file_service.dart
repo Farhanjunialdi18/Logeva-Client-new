@@ -85,6 +85,12 @@ class FileService {
     return hasil.status != ShareResultStatus.dismissed;
   }
 
+  /// Bagikan teks (SMS, WhatsApp, Bluetooth, dll.). Hasil false = dibatalkan.
+  static Future<bool> bagikanTeks(String teks, {String judul = 'Bagikan'}) async {
+    final hasil = await SharePlus.instance.share(ShareParams(text: teks, subject: judul));
+    return hasil.status != ShareResultStatus.dismissed;
+  }
+
   /// Simpan teks CSV. Hasil false = pengguna membatalkan.
   static Future<bool> saveCsv(String fileName, String content) =>
       saveBytes(fileName, Uint8List.fromList(utf8.encode(content)),

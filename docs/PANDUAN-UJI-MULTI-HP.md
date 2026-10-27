@@ -137,6 +137,32 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
 7. Tolak izin notifikasi (Pengaturan HP → Aplikasi → Notifikasi → matikan), ulangi langkah 3.
    - [ ] Tidak ada notifikasi, tetapi kotak peringatan di Beranda tetap tampil; aplikasi tidak error.
 
+## Skenario 10: Pengungsi keluar posko
+
+1. HP 2 (relawan): Pengungsi → ketuk Siti Aminah → **KELUAR DARI POSKO** → *Dirujuk ke RS / Puskesmas*,
+   isi "RSUD Pandeglang" → **SIMPAN**.
+   - [ ] Jumlah "Pengungsi di Posko" berkurang 1, tertulis "1 orang sudah keluar posko".
+   - [ ] Pilih **Keluar** di filter: Siti tampil dengan tanda ↗.
+2. Sinkron ke HP Induk, lalu ekspor paket dan impor di website.
+   - [ ] Di website, Siti ada di bagian **Sudah keluar posko** dan tidak dihitung di kapasitas.
+3. HP 2: Siti → **KEMBALI KE POSKO** → [ ] dihitung lagi.
+
+## Skenario 11: Cadangan & HP Induk pengganti
+
+1. HP Induk: Settings → **Cadangan & Pemulihan** → **SIMPAN CADANGAN KE FILE** (atau kirim ke HP lain).
+2. HP 3 (pengganti, aplikasi baru dipasang): layar awal → **Pulihkan HP pengganti dari cadangan** →
+   pilih file → periksa isi → **PULIHKAN**.
+   - [ ] Login admin dengan password yang sama seperti di HP Induk lama. Data posko, pengungsi, logistik sama.
+3. HP 2 (Anggota): kirim file sinkron ke HP 3 → [ ] diterima (HP 3 dikenali sebagai HP Induk yang sama).
+4. Jangan pakai HP Induk lama dan HP 3 bersamaan sebagai HP Induk.
+
+## Skenario 12: Keamanan
+
+1. Login, lalu biarkan HP tanpa disentuh 10 menit.
+   - [ ] Kembali ke layar awal dengan pesan "Aplikasi dikunci karena tidak dipakai 10 menit".
+2. Dashboard Grafik → **LAPORAN HARIAN (TEKS)** → **SALIN TEKS** → tempel di aplikasi SMS.
+   - [ ] Isi ringkas, tanpa nama pengungsi.
+
 ---
 
 ## Jika ada masalah

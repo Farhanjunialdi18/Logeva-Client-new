@@ -102,6 +102,8 @@ class AuthService {
           nama: relawan.nama,
           poskoId: relawan.poskoId,
           posko: relawan.posko,
+          kontak: relawan.kontak,
+          relawanId: relawan.id,
         ),
       );
       return const AuthResult(success: true, message: 'PIN terverifikasi.');

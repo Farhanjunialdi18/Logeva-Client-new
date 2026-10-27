@@ -103,6 +103,20 @@ class RoleSelectionScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+                    if (!anggota)
+                      TextButton.icon(
+                        onPressed: () => Navigator.pushNamed(
+                            context, AppRoutes.pulihkanCadangan),
+                        icon: Icon(Icons.restore_rounded,
+                            size: 18, color: p.textSecondary),
+                        label: Text(
+                          'Pulihkan HP pengganti dari cadangan',
+                          style: TextStyle(
+                            color: p.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

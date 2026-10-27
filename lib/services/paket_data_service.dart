@@ -123,6 +123,9 @@ class PaketData {
     'jenis_kelamin', 'kondisi_kesehatan', 'kelompok_rentan',
     'riwayat_penyakit', 'dicatat_oleh', 'dibuat_pada', 'diubah_pada',
     'dihapus_pada',
+    // Sejak 27 Okt 2026 (versi format tetap '1'; paket lama tanpa kolom ini
+    // = semua masih di posko).
+    'status_keberadaan', 'keluar_pada', 'keterangan_keluar',
   ];
   static const List<String> kolomMasuk = [
     'kode', 'kode_posko', 'nama_item', 'kategori', 'satuan', 'jumlah_masuk',
@@ -204,6 +207,9 @@ class PaketData {
             _waktu(e.dibuatPada),
             _waktu(e.diubahPada),
             _waktu(e.dihapusPada),
+            e.statusKeberadaan,
+            e.keluarPada == null ? '' : Tanggal.format(e.keluarPada!),
+            e.keteranganKeluar,
           ],
       ]),
       'barang_masuk.csv': CsvService.encode(kolomMasuk, [

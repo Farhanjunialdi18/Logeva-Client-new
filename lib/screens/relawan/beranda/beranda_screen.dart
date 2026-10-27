@@ -26,6 +26,7 @@ import '../../../widgets/theme_toggle_button.dart';
 import '../../../widgets/tentang_link.dart';
 import '../../../services/perangkat_service.dart';
 import '../../dashboard/dashboard_screen.dart';
+import '../info/info_posko_screen.dart';
 import '../../ringkasan/ringkasan_posko_screen.dart';
 
 class BerandaScreen extends StatefulWidget {
@@ -226,6 +227,17 @@ class _BerandaScreenState extends State<BerandaScreen> {
             ),
           ],
           if (SessionService.instance.poskoId != null) ...[
+            const SizedBox(height: 12),
+            MenuCard(
+              icon: Icons.info_rounded,
+              iconColor: AppColors.accentPurple,
+              title: 'INFO POSKO & AKUN',
+              description: 'Status operasi, data posko, supervisor & rekan relawan',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) =>
+                    InfoPoskoScreen(poskoId: SessionService.instance.poskoId!),
+              )),
+            ),
             const SizedBox(height: 12),
             MenuCard(
               icon: Icons.insights_rounded,
