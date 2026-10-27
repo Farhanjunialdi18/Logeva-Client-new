@@ -36,7 +36,8 @@ class TransferService {
   // pengungsi_csv.dart. Satu file = satu posko.
 
   static Future<TransferResult> exportPengungsi(Posko posko) async {
-    final list = await PengungsiRepository.instance.getByPosko(posko.id);
+    // Hanya yang masih di posko (template website tidak punya kolom status).
+    final list = await PengungsiRepository.instance.getDiPosko(poskoId: posko.id);
     final tanpaLahir = list.where((e) => e.perluDilengkapi).length;
     final tanpaKk = list.where((e) => e.nomorKk.isEmpty).length;
 

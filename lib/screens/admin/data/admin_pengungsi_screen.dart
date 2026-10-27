@@ -8,7 +8,6 @@
 
 import 'package:flutter/material.dart';
 
-import '../../../core/data_options.dart';
 import '../../../data/data_events.dart';
 import '../../../data/repositories/pengungsi_repository.dart';
 import '../../../data/repositories/posko_repository.dart';
@@ -19,10 +18,12 @@ import '../../../services/perangkat_service.dart';
 import '../../../services/transfer_service.dart';
 import '../../../utils/app_snackbar.dart';
 import '../../../theme/app_colors.dart';
+import '../../../theme/app_text_styles.dart';
 import '../../../widgets/account_tile.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/app_dropdown_field.dart';
 import '../../../widgets/empty_state.dart';
+import '../../../widgets/filter_pengungsi.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/search_field.dart';
 import '../../../widgets/secondary_button.dart';
@@ -40,7 +41,6 @@ class AdminPengungsiScreen extends StatefulWidget {
 
 class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
   static const String _semuaPosko = 'Semua Posko';
-  static const String _semuaRentan = 'Semua Kelompok';
   static const String _tanpaPosko = 'Tanpa posko';
 
   List<Pengungsi> _semua = [];
@@ -49,7 +49,7 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
   bool _loading = true;
   String _kataCari = '';
   String _filterPosko = _semuaPosko;
-  String _filterRentan = _semuaRentan;
+  SaringPengungsi _saring = const SaringPengungsi();
   bool _importing = false;
   bool _exporting = false;
 
@@ -101,12 +101,10 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
         _tanpaPosko => e.poskoId == null,
         _ => e.poskoId == posko?.id,
       };
-      final cocokRentan =
-          _filterRentan == _semuaRentan || e.kelompokRentan == _filterRentan;
       final cocokCari = q.isEmpty ||
           e.nama.toLowerCase().contains(q) ||
           e.nomorKk.contains(q);
-      return cocokPosko && cocokRentan && cocokCari;
+      return cocokPosko && _saring.cocok(e) && cocokCari;
     }).toList();
   }
 
@@ -159,7 +157,8 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
     final list = _hasilFilter;
     final adaFilter = _kataCari.isNotEmpty ||
         _filterPosko != _semuaPosko ||
-        _filterRentan != _semuaRentan;
+        _saring.adaFilter;
+    final diPosko = _semua.where((e) => e.masihDiPosko).length;
 
     return Material(
       type: MaterialType.transparency,
@@ -174,9 +173,17 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
             const SizedBox(height: 16),
 
             SummaryCard(
-              label: 'Total Pengungsi',
-              value: _loading ? '...' : '${_semua.length} Orang',
+              label: 'Pengungsi di Posko',
+              value: _loading ? '...' : '$diPosko Orang',
             ),
+            if (_semua.length > diPosko) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${_semua.length - diPosko} orang sudah keluar posko '
+                '(pulang/pindah/dirujuk).',
+                style: AppTextStyles.small(AppPalette.of(context)),
+              ),
+            ],
             const SizedBox(height: 14),
             if (_dobel > 0) ...[
               KotakKemungkinanDobel(jumlah: _dobel),
@@ -189,32 +196,21 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
             ),
             const SizedBox(height: 14),
 
-            Row(
-              children: [
-                Expanded(
-                  child: AppDropdownField(
-                    value: _filterPosko,
-                    items: [
-                      _semuaPosko,
-                      ..._daftarPosko.map((p) => p.nama),
-                      if (_adaTanpaPosko) _tanpaPosko,
-                    ],
-                    onChanged: (v) =>
-                        setState(() => _filterPosko = v ?? _semuaPosko),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AppDropdownField(
-                    value: _filterRentan,
-                    items: [_semuaRentan, ...DataOptions.kelompokRentan],
-                    onChanged: (v) =>
-                        setState(() => _filterRentan = v ?? _semuaRentan),
-                  ),
-                ),
+            AppDropdownField(
+              value: _filterPosko,
+              items: [
+                _semuaPosko,
+                ..._daftarPosko.map((p) => p.nama),
+                if (_adaTanpaPosko) _tanpaPosko,
               ],
+              onChanged: (v) => setState(() => _filterPosko = v ?? _semuaPosko),
             ),
             const SizedBox(height: 14),
+            FilterPengungsi(
+              nilai: _saring,
+              onChanged: (v) => setState(() => _saring = v),
+            ),
+            const SizedBox(height: 6),
 
             if (_loading)
               const Padding(
@@ -239,6 +235,7 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
                         '${e.isRentan ? ' • ${e.kelompokRentan}' : ''}',
                     '${e.kondisiKesehatan} · '
                         '${e.posko.isEmpty ? _tanpaPosko : e.posko}',
+                    if (!e.masihDiPosko) '↗ ${e.labelKeberadaan}',
                   ],
                   onTap: () => PengungsiDetailSheet.show(context, e),
                 ),

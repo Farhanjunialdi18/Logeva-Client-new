@@ -112,8 +112,9 @@ class _PenyimpananScreenState extends State<PenyimpananScreen> {
                         ? 'Di browser, data hanya tersimpan sementara dan '
                             'hilang saat halaman di-refresh.'
                         : 'Data tersimpan di perangkat ini saja dan ikut terhapus '
-                            'jika aplikasi di-uninstall. Lakukan export CSV secara '
-                            'berkala untuk dipindahkan ke Logeva Web.',
+                            'jika aplikasi di-uninstall. Buat cadangan secara '
+                            'berkala (Settings → Cadangan & Pemulihan) dan kirim '
+                            'Paket Data Posko ke pusat.',
                     style: AppTextStyles.small(p),
                   ),
                 ),

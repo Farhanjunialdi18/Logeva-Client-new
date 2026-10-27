@@ -9,6 +9,8 @@
 //                   kalau diisi harus 16 digit.
 // - [dihapusPada] : data tidak dihapus permanen, hanya ditandai, supaya
 //                   penghapusannya ikut terkirim ke pusat.
+// - [statusKeberadaan]: di posko / pulang / pindah / dirujuk. Hanya yang
+//                   masih di posko dihitung untuk kapasitas & kebutuhan.
 // ============================================================
 
 import '../core/data_options.dart';
@@ -34,6 +36,9 @@ class Pengungsi {
   final DateTime dibuatPada;
   final DateTime diubahPada;
   final DateTime? dihapusPada;
+  final String statusKeberadaan; // DataOptions.diPosko, dst.
+  final DateTime? keluarPada; // tanggal keluar posko (kalender)
+  final String keteranganKeluar; // misal nama posko tujuan / RS
 
   const Pengungsi({
     this.id,
@@ -53,6 +58,9 @@ class Pengungsi {
     required this.dibuatPada,
     required this.diubahPada,
     this.dihapusPada,
+    this.statusKeberadaan = DataOptions.diPosko,
+    this.keluarPada,
+    this.keteranganKeluar = '',
   });
 
   /// Pengungsi baru: kode unik & waktu dibuat otomatis,
@@ -94,6 +102,9 @@ class Pengungsi {
   bool get isPerempuan => jenisKelamin == DataOptions.perempuan;
   bool get isRentan => kelompokRentan != DataOptions.bukanRentan;
   bool get isDihapus => dihapusPada != null;
+  bool get masihDiPosko => statusKeberadaan == DataOptions.diPosko;
+  String get labelKeberadaan =>
+      DataOptions.statusKeberadaan[statusKeberadaan] ?? statusKeberadaan;
 
   /// Data versi lama tanpa tanggal lahir: wajib dilengkapi.
   bool get perluDilengkapi => tanggalLahir == null;
@@ -136,8 +147,37 @@ class Pengungsi {
       dicatatOleh: dicatatOleh,
       dibuatPada: dibuatPada,
       diubahPada: DateTime.now(),
+      statusKeberadaan: statusKeberadaan,
+      keluarPada: keluarPada,
+      keteranganKeluar: keteranganKeluar,
     );
   }
+
+  /// Pengungsi keluar dari posko ([status] selain di posko).
+  Pengungsi catatKeluar(String status, DateTime tanggal, String keterangan) =>
+      Pengungsi(
+        id: id, kode: kode, poskoId: poskoId, posko: posko, nama: nama,
+        asal: asal, tanggalLahir: tanggalLahir, usia: usia,
+        jenisKelamin: jenisKelamin, nomorKk: nomorKk,
+        kondisiKesehatan: kondisiKesehatan, kelompokRentan: kelompokRentan,
+        riwayatPenyakit: riwayatPenyakit, dicatatOleh: dicatatOleh,
+        dibuatPada: dibuatPada, diubahPada: DateTime.now(),
+        dihapusPada: dihapusPada,
+        statusKeberadaan: status,
+        keluarPada: DateTime(tanggal.year, tanggal.month, tanggal.day),
+        keteranganKeluar: keterangan.trim(),
+      );
+
+  /// Kembali tinggal di posko (misal batal pulang).
+  Pengungsi kembaliKePosko() => Pengungsi(
+        id: id, kode: kode, poskoId: poskoId, posko: posko, nama: nama,
+        asal: asal, tanggalLahir: tanggalLahir, usia: usia,
+        jenisKelamin: jenisKelamin, nomorKk: nomorKk,
+        kondisiKesehatan: kondisiKesehatan, kelompokRentan: kelompokRentan,
+        riwayatPenyakit: riwayatPenyakit, dicatatOleh: dicatatOleh,
+        dibuatPada: dibuatPada, diubahPada: DateTime.now(),
+        dihapusPada: dihapusPada,
+      );
 
   /// Salinan yang ditandai dihapus.
   Pengungsi tandaiDihapus() {
@@ -167,6 +207,9 @@ class Pengungsi {
       dibuatPada: dibuatPada,
       diubahPada: diubahPada ?? this.diubahPada,
       dihapusPada: dihapusPada ?? this.dihapusPada,
+      statusKeberadaan: statusKeberadaan,
+      keluarPada: keluarPada,
+      keteranganKeluar: keteranganKeluar,
     );
   }
 
@@ -190,6 +233,9 @@ class Pengungsi {
         'dibuat_pada': dibuatPada.toIso8601String(),
         'diubah_pada': diubahPada.toIso8601String(),
         'dihapus_pada': dihapusPada?.toIso8601String(),
+        'status_keberadaan': statusKeberadaan,
+        'keluar_pada': keluarPada == null ? null : Tanggal.format(keluarPada!),
+        'keterangan_keluar': keteranganKeluar.isEmpty ? null : keteranganKeluar,
       };
 
   factory Pengungsi.fromMap(Map<String, Object?> map) {
@@ -216,6 +262,13 @@ class Pengungsi {
       dibuatPada: dibuat,
       diubahPada: asDateOrNull(map['diubah_pada']) ?? dibuat,
       dihapusPada: asDateOrNull(map['dihapus_pada']),
+      statusKeberadaan: bacaKeberadaan(asText(map['status_keberadaan'])),
+      keluarPada: Tanggal.baca(asText(map['keluar_pada'])),
+      keteranganKeluar: asText(map['keterangan_keluar']),
     );
   }
+
+  /// Nilai tidak dikenal / kosong (data lama) = masih di posko.
+  static String bacaKeberadaan(String? nilai) =>
+      DataOptions.statusKeberadaan.containsKey(nilai) ? nilai! : DataOptions.diPosko;
 }

@@ -25,6 +25,19 @@ class DataOptions {
     'Sakit',
   ];
 
+  /// Keberadaan pengungsi (kolom status_keberadaan, sama dengan website).
+  /// Hanya yang masih "di posko" dihitung untuk kapasitas & kebutuhan.
+  static const String diPosko = 'di_posko';
+  static const String pulang = 'pulang';
+  static const String pindah = 'pindah';
+  static const String dirujuk = 'dirujuk';
+  static const Map<String, String> statusKeberadaan = {
+    diPosko: 'Di posko',
+    pulang: 'Pulang ke rumah',
+    pindah: 'Pindah ke posko lain',
+    dirujuk: 'Dirujuk ke RS / Puskesmas',
+  };
+
   // ---- Logistik (nilai sama persis dengan website) ----
   static const String semuaKategori = 'Semua Kategori';
 

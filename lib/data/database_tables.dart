@@ -16,7 +16,7 @@ class DatabaseTables {
   DatabaseTables._();
 
   static const String databaseName = 'logeva_client.db';
-  static const int version = 8;
+  static const int version = 9;
 
   // ---- Data lapangan (versi 1) ----
   static const String pengungsi = 'pengungsi';
@@ -419,6 +419,14 @@ class DatabaseTables {
   static const String _sekarang =
       "strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime')";
 
+  /// Versi 9: pengungsi yang pulang / pindah posko / dirujuk tidak lagi
+  /// dihapus, tapi dicatat keberadaannya (data lama = masih di posko).
+  static final List<String> _v9 = [
+    "ALTER TABLE $pengungsi ADD COLUMN status_keberadaan TEXT NOT NULL DEFAULT 'di_posko'",
+    'ALTER TABLE $pengungsi ADD COLUMN keluar_pada TEXT',
+    'ALTER TABLE $pengungsi ADD COLUMN keterangan_keluar TEXT',
+  ];
+
   /// Perintah untuk HP yang baru pertama kali memasang aplikasi.
   static final List<String> createStatements = [
     ..._v1,
@@ -429,6 +437,7 @@ class DatabaseTables {
     ..._v6,
     ..._v7,
     ..._v8,
+    ..._v9,
   ];
 
   /// Perintah per versi, untuk HP yang memperbarui aplikasi.
@@ -443,5 +452,6 @@ class DatabaseTables {
     6: _v6,
     7: _v7,
     8: _v8,
+    9: _v9,
   };
 }

@@ -1,3 +1,13 @@
+import java.util.Properties
+
+// Kunci rilis (android/key.properties + app/logeva-rilis.jks, tidak ikut git).
+// SIMPAN CADANGANNYA: tanpa kunci yang sama, APK baru tidak bisa menimpa
+// aplikasi yang sudah terpasang di HP lapangan.
+val kunciRilis = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -5,7 +15,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.flutter_application_1"
+    namespace = "id.gmls.logeva"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -17,8 +27,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.flutter_application_1"
+        // ID tetap aplikasi. JANGAN diganti lagi setelah dipasang di HP lapangan:
+        // ID berbeda = aplikasi lain (tidak bisa update, data lama tertinggal).
+        applicationId = "id.gmls.logeva"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -31,11 +42,25 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (kunciRilis.isNotEmpty()) {
+            create("rilis") {
+                keyAlias = kunciRilis["keyAlias"] as String
+                keyPassword = kunciRilis["keyPassword"] as String
+                storeFile = file(kunciRilis["storeFile"] as String)
+                storePassword = kunciRilis["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Tanpa key.properties (misal komputer lain) memakai kunci debug,
+            // tapi APK itu TIDAK bisa menimpa APK rilis resmi di HP lapangan.
+            signingConfig = if (kunciRilis.isNotEmpty())
+                signingConfigs.getByName("rilis")
+            else
+                signingConfigs.getByName("debug")
         }
     }
 }

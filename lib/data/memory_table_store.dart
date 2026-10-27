@@ -61,4 +61,15 @@ class MemoryTableStore implements TableStore {
   Future<void> delete(String table, int id) async {
     _rows(table).removeWhere((r) => r['id'] == id);
   }
+
+  @override
+  Future<void> gantiSemua(Map<String, List<Map<String, Object?>>> isi) async {
+    isi.forEach((table, rows) {
+      _tables[table] = [for (final r in rows) Map<String, Object?>.of(r)];
+      _nextId[table] = rows.fold<int>(0, (m, r) {
+        final id = (r['id'] as num?)?.toInt() ?? 0;
+        return id > m ? id : m;
+      });
+    });
+  }
 }

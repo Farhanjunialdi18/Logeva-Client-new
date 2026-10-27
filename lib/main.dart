@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'routes/app_routes.dart';
+import 'services/kunci_otomatis.dart';
 import 'services/perangkat_service.dart';
 import 'services/peringatan_service.dart';
 import 'theme/app_theme.dart';
@@ -18,6 +19,8 @@ Future<void> main() async {
   // Peran HP (Induk/Anggota) dibaca sekali saat aplikasi dibuka.
   await PerangkatService.muat();
   runApp(const LogevaApp());
+  // Keluar otomatis setelah 10 menit tidak dipakai (data pribadi pengungsi).
+  KunciOtomatis.instance.mulai();
   // Notifikasi lokal posko hampir/sudah penuh & stok < 7 hari (tanpa
   // internet). Setelah runApp supaya jendela izin bisa tampil.
   PeringatanService.mulai();
@@ -43,6 +46,8 @@ class LogevaApp extends StatelessWidget {
           locale: const Locale('id', 'ID'),
           supportedLocales: const [Locale('id', 'ID')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          navigatorKey: KunciOtomatis.instance.navigatorKey,
+          builder: (context, child) => KunciOtomatis.instance.bungkus(child!),
           initialRoute: AppRoutes.roleSelection,
           routes: AppRoutes.routes,
         );

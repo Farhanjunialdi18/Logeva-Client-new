@@ -100,4 +100,19 @@ class SqliteTableStore implements TableStore {
     final db = await _db;
     await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
+
+  @override
+  Future<void> gantiSemua(Map<String, List<Map<String, Object?>>> isi) async {
+    final db = await _db;
+    await db.transaction((txn) async {
+      for (final e in isi.entries) {
+        await txn.delete(e.key);
+        final batch = txn.batch();
+        for (final row in e.value) {
+          batch.insert(e.key, row); // id dipertahankan
+        }
+        await batch.commit(noResult: true);
+      }
+    });
+  }
 }

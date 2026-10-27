@@ -61,6 +61,9 @@ class DataDashboard {
   /// Posko beroperasi per tingkat bantuan (TingkatBantuan).
   final Map<String, int> tingkatPosko;
 
+  /// Pengungsi yang sudah keluar posko: status keberadaan -> jumlah.
+  final Map<String, int> keluarPosko;
+
   const DataDashboard({
     required this.posko,
     required this.jumlahPosko,
@@ -72,9 +75,11 @@ class DataDashboard {
     required this.statusStok,
     required this.ketahanan,
     required this.tingkatPosko,
+    this.keluarPosko = const {},
   });
 
   int get sehat => komposisi.total - sakit;
+  int get jumlahKeluar => keluarPosko.values.fold(0, (a, b) => a + b);
   int get pengungsiBaru7Hari => tren.fold(0, (a, h) => a + h.pengungsiBaru);
 }
 
@@ -95,9 +100,16 @@ class DashboardService {
         ? semuaPosko
         : semuaPosko.where((p) => p.id == poskoId).toList();
 
-    final pengungsi = (await PengungsiRepository.withStore(s).getAll())
+    // Semua yang pernah dicatat (untuk tren kedatangan & yang sudah keluar),
+    // dan yang masih di posko (untuk komposisi, kapasitas, kesehatan).
+    final pernah = (await PengungsiRepository.withStore(s).getAll())
         .where((e) => poskoId == null || e.poskoId == poskoId)
         .toList();
+    final pengungsi = pernah.where((e) => e.masihDiPosko).toList();
+    final keluarPosko = <String, int>{};
+    for (final e in pernah.where((e) => !e.masihDiPosko)) {
+      keluarPosko[e.statusKeberadaan] = (keluarPosko[e.statusKeberadaan] ?? 0) + 1;
+    }
     final logistik = LogistikRepository.withStore(s);
     final masuk = await logistik.getMasuk(poskoId: poskoId);
     final keluar = await logistik.getKeluar(poskoId: poskoId);
@@ -123,7 +135,7 @@ class DashboardService {
     ];
     int hitung(Iterable<DateTime> tanggal, DateTime h) =>
         tanggal.where((t) => t.year == h.year && t.month == h.month && t.day == h.day).length;
-    final tglPengungsi = pengungsi.map((e) => WaktuWib.jamDinding(e.dibuatPada)).toList();
+    final tglPengungsi = pernah.map((e) => WaktuWib.jamDinding(e.dibuatPada)).toList();
     final tren = [
       for (final h in hari)
         HariGrafik(
@@ -171,6 +183,7 @@ class DashboardService {
       statusStok: statusStok,
       ketahanan: ketahanan,
       tingkatPosko: tingkat,
+      keluarPosko: keluarPosko,
     );
   }
 }

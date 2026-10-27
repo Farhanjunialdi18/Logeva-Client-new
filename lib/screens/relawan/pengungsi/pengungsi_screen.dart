@@ -16,6 +16,7 @@ import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/data_table_card.dart';
+import '../../../widgets/filter_pengungsi.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/search_field.dart';
@@ -36,6 +37,7 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
   List<Pengungsi> _semua = [];
   bool _loading = true;
   String _kataCari = '';
+  SaringPengungsi _saring = const SaringPengungsi();
 
   @override
   void initState() {
@@ -64,12 +66,13 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
 
   List<Pengungsi> get _hasilCari {
     final q = _kataCari.trim().toLowerCase();
-    if (q.isEmpty) return _semua;
     return _semua
         .where((e) =>
-            e.nama.toLowerCase().contains(q) ||
-            e.asal.toLowerCase().contains(q) ||
-            e.nomorKk.contains(q))
+            _saring.cocok(e) &&
+            (q.isEmpty ||
+                e.nama.toLowerCase().contains(q) ||
+                e.asal.toLowerCase().contains(q) ||
+                e.nomorKk.contains(q)))
         .toList();
   }
 
@@ -84,6 +87,8 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
     final p = AppPalette.of(context);
     final list = _hasilCari;
     final perluDilengkapi = _semua.where((e) => e.perluDilengkapi).length;
+    final diPosko = _semua.where((e) => e.masihDiPosko).length;
+    final keluar = _semua.length - diPosko;
 
     return AppBackground(
       child: Column(
@@ -98,9 +103,14 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
           const SizedBox(height: 16),
 
           SummaryCard(
-            label: 'Total Pengungsi',
-            value: _loading ? '...' : '${_semua.length} Orang',
+            label: 'Pengungsi di Posko',
+            value: _loading ? '...' : '$diPosko Orang',
           ),
+          if (keluar > 0) ...[
+            const SizedBox(height: 6),
+            Text('$keluar orang sudah keluar posko (pulang/pindah/dirujuk).',
+                style: AppTextStyles.small(p)),
+          ],
           const SizedBox(height: 16),
 
           PrimaryButton(text: '+ TAMBAH PENGUNGSI', onPressed: _tambah),
@@ -111,6 +121,11 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
             onChanged: (v) => setState(() => _kataCari = v),
           ),
           const SizedBox(height: 14),
+          FilterPengungsi(
+            nilai: _saring,
+            onChanged: (v) => setState(() => _saring = v),
+          ),
+          const SizedBox(height: 6),
 
           if (perluDilengkapi > 0) ...[
             Text(
@@ -123,9 +138,11 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
 
           DataTableCard(
             isLoading: _loading,
-            emptyMessage: _kataCari.isEmpty
-                ? 'Belum ada data pengungsi.'
-                : 'Tidak ditemukan "$_kataCari".',
+            emptyMessage: _kataCari.isNotEmpty
+                ? 'Tidak ditemukan "$_kataCari".'
+                : _saring.adaFilter
+                    ? 'Tidak ada pengungsi yang cocok dengan filter.'
+                    : 'Belum ada data pengungsi.',
             columns: const [
               TableColumnSpec('Nama', flex: 30),
               TableColumnSpec('JK', flex: 10),
@@ -135,7 +152,8 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
             ],
             rows: list
                 .map((e) => [
-                      e.perluDilengkapi ? '⚠ ${e.nama}' : e.nama,
+                      '${e.perluDilengkapi ? '⚠ ' : ''}'
+                          '${e.masihDiPosko ? '' : '↗ '}${e.nama}',
                       e.isPerempuan ? 'P' : 'L',
                       '${e.usia} th',
                       e.isRentan ? e.kelompokRentan : '-',
@@ -147,7 +165,8 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
           if (list.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              'Ketuk baris untuk melihat detail, edit, atau hapus.',
+              'Ketuk baris untuk detail, edit, keluar posko, atau hapus.'
+              '${list.any((e) => !e.masihDiPosko) ? ' ↗ = sudah keluar posko.' : ''}',
               style: AppTextStyles.small(p).copyWith(color: AppColors.success),
             ),
           ],
