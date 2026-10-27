@@ -17,7 +17,7 @@ import 'keamanan_screen.dart';
 import 'pengaturan_data_screen.dart';
 import 'penyimpanan_screen.dart';
 import 'profil_admin_screen.dart';
-import 'tentang_screen.dart';
+import '../../tentang/tentang_screen.dart';
 
 class AdminSettingsScreen extends StatelessWidget {
   final VoidCallback onBack;
@@ -109,7 +109,7 @@ class AdminSettingsScreen extends StatelessWidget {
             icon: Icons.info_rounded,
             iconColor: AppColors.accentBlue,
             title: 'Tentang LOGEVA',
-            description: 'Versi aplikasi dan informasi sistem',
+            description: 'Tentang sistem, tim pengembang, dan versi',
             onTap: () => buka(const TentangScreen()),
           ),
           const SizedBox(height: 24),

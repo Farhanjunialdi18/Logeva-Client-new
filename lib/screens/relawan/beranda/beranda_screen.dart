@@ -23,6 +23,7 @@ import '../../../widgets/offline_badge.dart';
 import '../../../widgets/stat_card.dart';
 import '../../../widgets/status_bantuan_widgets.dart';
 import '../../../widgets/theme_toggle_button.dart';
+import '../../../widgets/tentang_link.dart';
 import '../../../services/perangkat_service.dart';
 import '../../dashboard/dashboard_screen.dart';
 import '../../ringkasan/ringkasan_posko_screen.dart';
@@ -251,6 +252,8 @@ class _BerandaScreenState extends State<BerandaScreen> {
             ),
           ],
           const SizedBox(height: 16),
+          const TentangLink(),
+          const SizedBox(height: 8),
         ],
       ),
     );
