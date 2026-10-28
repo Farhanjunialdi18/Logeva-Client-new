@@ -63,29 +63,31 @@ class DemoData {
           satuan: satuan,
           kebutuhanHarian: kebutuhan,
         ),
-      Barang.baru(kategoriId: 4, namaItem: 'Selimut', satuan: 'buah'),
     ];
-    // id barang di memori: Beras = 1, Air Mineral = 2, Selimut = 3.
-    Barang id(int n) => Barang.fromMap(barang[n - 1].toMap()..['id'] = n);
+    // id barang di memori = urutan di daftar baku (mulai 1).
+    Barang id(String nama) {
+      final i = barang.indexWhere((b) => b.namaItem == nama);
+      return Barang.fromMap(barang[i].toMap()..['id'] = i + 1);
+    }
     final hariIni = WaktuWib.hariIni();
     final masuk = [
       BarangMasuk.baru(
         poskoId: 1,
-        barang: id(1),
+        barang: id('Beras'),
         jumlah: 50,
         sumberBantuan: 'BPBD Lebak',
         tanggal: hariIni.subtract(const Duration(days: 2)),
       ),
       BarangMasuk.baru(
         poskoId: 1,
-        barang: id(2),
+        barang: id('Air Mineral'),
         jumlah: 300,
         sumberBantuan: 'Donatur warga',
         tanggal: hariIni.subtract(const Duration(days: 1)),
       ),
       BarangMasuk.baru(
         poskoId: 2,
-        barang: id(3),
+        barang: id('Selimut'),
         jumlah: 40,
         sumberBantuan: 'BNPB',
         tanggal: hariIni,
@@ -94,7 +96,7 @@ class DemoData {
     final keluar = [
       BarangKeluar.baru(
         poskoId: 1,
-        barang: id(1),
+        barang: id('Beras'),
         jumlah: 12,
         tujuan: 'dapur_umum',
         tanggal: hariIni,

@@ -417,6 +417,12 @@ class _PetaBarang {
   }
 
   Future<Barang> cari(String kategori, String nama, String satuan) async {
+    // Nama lama yang sudah digabung (misal "Pakaian Layak Pakai") -> nama baku.
+    final baku = DataOptions.namaBakuBarang(nama);
+    if (baku != nama) {
+      final ada = _byKunci.values.where((b) => b.namaItem.toLowerCase() == baku.toLowerCase());
+      if (ada.isNotEmpty) return ada.first;
+    }
     var katId = _kategori[kategori.toLowerCase()];
     if (katId == null) {
       katId = _simpan

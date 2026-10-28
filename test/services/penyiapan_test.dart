@@ -57,7 +57,7 @@ void main() {
         nama: 'Siti', pin: '222222', status: DataOptions.statusNonaktif,
         dibuatPada: DateTime(2026)).tempatkan(posko));
     await BarangRepository.withStore(induk).add(Barang.baru(
-        kategoriId: 4, namaItem: 'Selimut', satuan: 'buah', kebutuhanHarian: 0.1));
+        kategoriId: 4, namaItem: 'Terpal', satuan: 'buah', kebutuhanHarian: 0.1));
   });
 
   tearDown(() async {
@@ -120,7 +120,7 @@ void main() {
     expect(adminRepo.masihPasswordBawaan(admin), isFalse);
 
     final barang = await BarangRepository.withStore(anggota).getAll();
-    final selimut = barang.firstWhere((b) => b.namaItem == 'Selimut');
+    final selimut = barang.firstWhere((b) => b.namaItem == 'Terpal');
     expect(selimut.kategori, 'Perlengkapan Tidur');
     expect(selimut.kebutuhanHarian, 0.1);
     expect(barang.where((b) => b.namaItem == 'Beras'), hasLength(1),

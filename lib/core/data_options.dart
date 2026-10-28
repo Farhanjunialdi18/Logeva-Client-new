@@ -55,12 +55,37 @@ class DataOptions {
     'Lainnya',
   ];
 
-  /// Master barang bawaan website: (nama, id kategori, satuan,
-  /// kebutuhan per orang per hari).
-  static const List<(String, int, String, double)> barangAwal = [
+  /// MASTER BARANG BAKU, sama persis dengan website
+  /// (app/Support/MasterLogistikBaku.php). Ubah di kedua tempat.
+  /// (nama, id kategori, satuan, kebutuhan per orang per hari; null = bukan
+  /// barang habis pakai harian, tidak dihitung "cukup berapa hari").
+  static const List<(String, int, String, double?)> barangAwal = [
     ('Beras', 1, 'kg', 0.3),
-    ('Air Mineral', 2, 'liter', 3),
+    ('Mie Instan', 1, 'bungkus', null),
+    ('Telur Ayam', 1, 'butir', null),
+    ('Air Mineral', 2, 'liter', 2),
+    ('Baju', 3, 'potong', null),
+    ('Celana', 3, 'potong', null),
+    ('Selimut', 4, 'lembar', null),
+    ('Tikar', 4, 'lembar', null),
+    ('Pembalut', 5, 'pak', null),
+    ('Sabun Mandi', 5, 'batang', null),
+    ('Masker', 6, 'kotak', null),
+    ('Paracetamol', 6, 'strip', null),
+    ('Popok Bayi', 7, 'pak', null),
+    ('Susu Formula', 7, 'kaleng', null),
+    ('Minyak Goreng', 8, 'liter', null),
   ];
+
+  /// Nama lama barang yang sudah digabung (huruf kecil) -> nama baku.
+  /// Sama dengan MasterLogistikBaku::ALIAS di website.
+  static const Map<String, String> aliasBarang = {
+    'pakaian layak pakai': 'Baju',
+  };
+
+  /// Nama baku untuk [nama] (nama lama -> nama baru; lainnya tetap).
+  static String namaBakuBarang(String nama) =>
+      aliasBarang[nama.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase()] ?? nama;
 
   /// Untuk apa barang dikeluarkan (StokKeluar::TUJUAN): kunci -> label.
   static const Map<String, String> tujuanKeluar = {

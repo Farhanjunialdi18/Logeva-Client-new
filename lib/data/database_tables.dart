@@ -16,7 +16,7 @@ class DatabaseTables {
   DatabaseTables._();
 
   static const String databaseName = 'logeva_client.db';
-  static const int version = 9;
+  static const int version = 10;
 
   // ---- Data lapangan (versi 1) ----
   static const String pengungsi = 'pengungsi';
@@ -427,6 +427,26 @@ class DatabaseTables {
     'ALTER TABLE $pengungsi ADD COLUMN keterangan_keluar TEXT',
   ];
 
+  /// Versi 10: master barang disamakan dengan website (daftar baku,
+  /// Air Mineral 2 liter, pakaian tanpa kebutuhan harian) dan barang lama
+  /// yang sudah digabung (alias) dipindahkan ke barang bakunya.
+  static final List<String> _v10 = [
+    for (final (nama, kategori, satuan, kebutuhan) in DataOptions.barangAwal) ...[
+      'INSERT OR IGNORE INTO $barang (kategori_id, nama_item, satuan, kebutuhan_harian, '
+          'dibuat_pada, diubah_pada) VALUES ($kategori, ${_teks(nama)}, '
+          '${_teks(satuan)}, $kebutuhan, $_sekarang, $_sekarang)',
+      'UPDATE $barang SET satuan = ${_teks(satuan)}, kebutuhan_harian = $kebutuhan, '
+          'diubah_pada = $_sekarang WHERE nama_item = ${_teks(nama)}',
+    ],
+    for (final e in DataOptions.aliasBarang.entries) ...[
+      for (final t in [barangMasuk, barangKeluar])
+        'UPDATE $t SET barang_id = (SELECT id FROM $barang WHERE nama_item = '
+            '${_teks(e.value)} LIMIT 1) WHERE barang_id IN (SELECT id FROM $barang '
+            'WHERE nama_item = ${_teks(e.key)})',
+      'DELETE FROM $barang WHERE nama_item = ${_teks(e.key)}',
+    ],
+  ];
+
   /// Perintah untuk HP yang baru pertama kali memasang aplikasi.
   static final List<String> createStatements = [
     ..._v1,
@@ -438,6 +458,7 @@ class DatabaseTables {
     ..._v7,
     ..._v8,
     ..._v9,
+    ..._v10,
   ];
 
   /// Perintah per versi, untuk HP yang memperbarui aplikasi.
@@ -453,5 +474,6 @@ class DatabaseTables {
     7: _v7,
     8: _v8,
     9: _v9,
+    10: _v10,
   };
 }

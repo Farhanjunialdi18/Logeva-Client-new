@@ -11,7 +11,6 @@ import 'package:flutter_application_1/data/repositories/barang_repository.dart';
 import 'package:flutter_application_1/data/repositories/pengungsi_repository.dart';
 import 'package:flutter_application_1/data/repositories/posko_repository.dart';
 import 'package:flutter_application_1/models/admin.dart';
-import 'package:flutter_application_1/models/barang.dart';
 import 'package:flutter_application_1/models/catatan_logistik.dart';
 import 'package:flutter_application_1/models/pengungsi.dart';
 import 'package:flutter_application_1/screens/admin/data/pengungsi_dobel_screen.dart';
@@ -309,6 +308,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('tambah barang: peringatan nama lama & nama mirip', (tester) async {
+    SessionService.instance.startAdmin(admin);
+    await cek(tester, const BarangFormScreen(), gelap: true, skalaTeks: 1.3);
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Pakaian Layak Pakai');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('sudah digabung ke "Baju"'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).first, 'Baju Anak');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Mirip barang yang sudah ada: Baju'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).first, 'Terpal');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('belum ada di Master Logistik pusat'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   // ---------------- PERINGATAN KAPASITAS & STOK ----------------
   testWidgets('peringatan posko penuh & stok: kotak rapi di beranda dan form',
       (tester) async {
@@ -428,12 +447,13 @@ void main() {
   testWidgets('stok minus: kotak peringatan tampil rapi', (tester) async {
     SessionService.instance.startRelawan(relawan);
     // Air Mineral di demo: masuk 300 -> keluar 400 = minus 100.
+    final air = (await tester.runAsync(() => BarangRepository.instance.getAll()))!
+        .firstWhere((b) => b.namaItem == 'Air Mineral');
     final id = await tester.runAsync(() => LocalDatabase.store.insert(
           'barang_keluar',
           BarangKeluar.baru(
             poskoId: 1,
-            barang: Barang.fromMap({'id': 2, 'kategori_id': 2, 'nama_item': 'Air Mineral',
-                'satuan': 'liter', 'dibuat_pada': '2026-10-24T08:00:00.000'}),
+            barang: air,
             jumlah: 400,
             tujuan: 'dibagikan',
             tanggal: DateTime(2026, 10, 24),

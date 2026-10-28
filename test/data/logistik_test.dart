@@ -56,12 +56,17 @@ void main() {
     expect(kategori.first.id, 1);
 
     final barang = await repo.getAll();
-    expect(barang.map((b) => b.namaItem), ['Beras', 'Air Mineral']);
-    expect(barang.first.kategori, 'Makanan');
-    expect(barang.first.satuan, 'kg');
-    expect(barang.first.kebutuhanHarian, 0.3);
-    expect(barang[1].kebutuhanHarian, 3);
-    expect(barang.every((b) => b.isPokok), isTrue);
+    // Daftar baku = sama dengan website (MasterLogistikBaku).
+    expect(barang.map((b) => b.namaItem).toSet(),
+        DataOptions.barangAwal.map((e) => e.$1).toSet());
+    Barang cari(String n) => barang.firstWhere((b) => b.namaItem == n);
+    expect(cari('Beras').kategori, 'Makanan');
+    expect(cari('Beras').satuan, 'kg');
+    expect(cari('Beras').kebutuhanHarian, 0.3);
+    expect(cari('Air Mineral').kebutuhanHarian, 2);
+    expect(cari('Baju').kebutuhanHarian, isNull, reason: 'pakaian bukan kebutuhan harian');
+    expect(barang.where((b) => b.isPokok).map((b) => b.namaItem).toSet(),
+        {'Beras', 'Air Mineral'});
     await store.close();
   });
 
@@ -104,7 +109,7 @@ void main() {
         hasLength(1), reason: 'tidak dobel dengan Beras bawaan');
     expect(cari('Beras').satuan, 'kg');
     expect(cari('Selimut').kategori, 'Perlengkapan Tidur');
-    expect(cari('Selimut').satuan, 'buah');
+    expect(cari('Selimut').satuan, 'lembar', reason: 'satuan baku (versi 10)');
     expect(cari('Paracetamol').kategori, 'Medis');
     expect(cari('Terpal').kategori, 'Lainnya');
     expect(cari('Sarden').kategori, 'Makanan',
@@ -214,9 +219,23 @@ void main() {
 
     test('barang & posko yang punya catatan tidak bisa dihapus', () async {
       final barangRepo = BarangRepository.withStore(store);
-      expect(await barangRepo.cekHapus(beras), isNull);
+      // Barang baku pusat tidak boleh dihapus dari HP.
+      expect(await barangRepo.cekHapus(beras), contains('Master Logistik pusat'));
+      await expectLater(barangRepo.delete(beras.id!), throwsA(isA<BarangException>()));
+
+      // Barang buatan sendiri: boleh dihapus selama belum ada catatan.
+      await barangRepo.add(Barang.baru(kategoriId: 10, namaItem: 'Terpal', satuan: 'lembar'));
+      final terpal = (await barangRepo.getAll()).firstWhere((b) => b.namaItem == 'Terpal');
+      expect(await barangRepo.cekHapus(terpal), isNull);
+      await repo.catatMasuk(BarangMasuk.baru(
+          poskoId: posko.id!, barang: terpal, jumlah: 3, sumberBantuan: 'BPBD',
+          tanggal: DateTime(2026, 10, 20)));
+      expect(await barangRepo.cekHapus(terpal), contains('catatan masuk/keluar'));
+      await expectLater(barangRepo.delete(terpal.id!), throwsA(isA<BarangException>()),
+          reason: 'catatan & stok tidak boleh ikut hilang');
+      expect((await barangRepo.getAll()).any((b) => b.namaItem == 'Terpal'), isTrue);
+
       await repo.catatMasuk(masuk(1));
-      expect(await barangRepo.cekHapus(beras), isNotNull);
 
       SessionService.instance.startAdmin(Admin(
         nama: 'Admin',
@@ -239,7 +258,7 @@ void main() {
       // Nama sama di kategori lain boleh (aturan website).
       await barangRepo
           .add(Barang.baru(kategoriId: 8, namaItem: 'Beras', satuan: 'kg'));
-      expect(await barangRepo.count(), 3);
+      expect(await barangRepo.count(), DataOptions.barangAwal.length + 1);
     });
   });
 }

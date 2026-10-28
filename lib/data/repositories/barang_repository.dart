@@ -5,6 +5,7 @@
 // relawan memilih barang dari daftar ini saat mencatat masuk/keluar.
 // ============================================================
 
+import '../../core/data_options.dart';
 import '../../models/barang.dart';
 import '../data_events.dart';
 import '../database_tables.dart';
@@ -113,6 +114,9 @@ class BarangRepository {
   /// Alasan barang TIDAK boleh dihapus, atau null kalau boleh.
   /// Barang yang sudah punya catatan masuk/keluar tidak boleh dihapus,
   /// karena catatannya harus tetap terkirim ke pusat.
+  /// Alasan barang TIDAK boleh dihapus, atau null kalau boleh:
+  ///  - sudah punya catatan masuk/keluar (menghapusnya = catatan & stok hilang);
+  ///  - termasuk Master Logistik baku pusat (harus sama dengan website).
   Future<String?> cekHapus(Barang barang) async {
     bool dipakai(Map<String, Object?> r) => r['barang_id'] == barang.id;
     final masuk =
@@ -120,12 +124,26 @@ class BarangRepository {
     final keluar =
         (await _store.getAll(DatabaseTables.barangKeluar)).where(dipakai).length;
     if (masuk + keluar > 0) {
-      return 'Barang ini sudah punya ${masuk + keluar} catatan masuk/keluar.';
+      return 'Barang ini sudah dipakai di ${masuk + keluar} catatan masuk/keluar; '
+          'menghapusnya akan menghilangkan catatan & stoknya. Barang ganda '
+          'digabung di website (Master Logistik → Edit → Gabungkan), lalu '
+          'import ulang Master Barang di HP ini.';
+    }
+    final nama = barang.namaItem.trim().toLowerCase();
+    if (DataOptions.barangAwal.any((e) => e.$1.toLowerCase() == nama)) {
+      return 'Barang ini termasuk Master Logistik pusat, jadi harus tetap ada '
+          'supaya sama dengan website.';
     }
     return null;
   }
 
+  /// Hapus barang. Ditolak (BarangException) kalau [cekHapus] tidak
+  /// mengizinkan, supaya catatan & stok tidak pernah ikut hilang.
   Future<void> delete(int id) async {
+    final barang = (await getAll()).where((b) => b.id == id);
+    if (barang.isEmpty) return;
+    final alasan = await cekHapus(barang.first);
+    if (alasan != null) throw BarangException(alasan);
     await _store.delete(_table, id);
     DataEvents.instance.notifyChanged();
   }

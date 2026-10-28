@@ -46,6 +46,9 @@ class _BarangFormScreenState extends State<BarangFormScreen> {
 
   bool get _isEdit => widget.existing != null;
 
+  /// Semua barang di HP ini, untuk peringatan nama mirip (barang ganda).
+  List<Barang> _semuaBarang = [];
+
   @override
   void initState() {
     super.initState();
@@ -57,13 +60,51 @@ class _BarangFormScreenState extends State<BarangFormScreen> {
     _deskripsi = TextEditingController(text: e?.deskripsi ?? '');
     _kategoriId = e?.kategoriId;
     _satuan = e?.satuan;
+    _nama.addListener(() => setState(() {}));
     _load();
   }
 
   Future<void> _load() async {
     final kategori = await BarangRepository.instance.getKategori();
+    final barang = await BarangRepository.instance.getAll();
     if (!mounted) return;
-    setState(() => _kategori = kategori);
+    setState(() {
+      _kategori = kategori;
+      _semuaBarang = barang;
+    });
+  }
+
+  static String _rapi(String s) =>
+      s.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+
+  /// Peringatan supaya tidak membuat barang ganda dengan nama berbeda
+  /// (master pusat & HP lain memakai nama yang sama persis).
+  String? get _peringatanNama {
+    final nama = _rapi(_nama.text);
+    if (_isEdit || nama.length < 3) return null;
+    final baku = DataOptions.namaBakuBarang(_nama.text);
+    if (baku != _nama.text) {
+      return '"${_nama.text.trim()}" sudah digabung ke "$baku" di pusat. Pakai barang "$baku".';
+    }
+    if (_semuaBarang.any((b) => _rapi(b.namaItem) == nama)) return null; // dicek saat simpan
+    final kata = nama.split(' ').where((k) => k.length >= 3).toSet();
+    final mirip = _semuaBarang
+        .where((b) {
+          final n = _rapi(b.namaItem);
+          return n.contains(nama) || nama.contains(n) || n.split(' ').any(kata.contains);
+        })
+        .map((b) => b.namaItem)
+        .take(4)
+        .toList();
+    final dariPusat = DataOptions.barangAwal.any((e) => _rapi(e.$1) == nama);
+    if (mirip.isNotEmpty) {
+      return 'Mirip barang yang sudah ada: ${mirip.join(', ')}. Kalau barangnya sama, '
+          'pakai barang itu supaya tidak tercatat ganda di pusat.';
+    }
+    return dariPusat
+        ? null
+        : 'Barang ini belum ada di Master Logistik pusat. Pastikan nama & satuannya '
+            'sesuai, karena di pusat akan dicatat sebagai barang baru.';
   }
 
   @override
@@ -135,7 +176,12 @@ class _BarangFormScreenState extends State<BarangFormScreen> {
       confirmText: 'HAPUS',
     );
     if (!yakin || !mounted) return;
-    await BarangRepository.instance.delete(barang.id!);
+    try {
+      await BarangRepository.instance.delete(barang.id!);
+    } on BarangException catch (e) {
+      if (mounted) AppSnackbar.show(context, 'Barang tidak bisa dihapus. $e', isError: true);
+      return;
+    }
     if (!mounted) return;
     AppSnackbar.show(context, 'Barang dihapus.');
     Navigator.of(context).pop();
@@ -171,6 +217,13 @@ class _BarangFormScreenState extends State<BarangFormScreen> {
                 textCapitalization: TextCapitalization.words,
                 validator: Validators.wajib('Nama item'),
               ),
+              if (_peringatanNama != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '⚠ $_peringatanNama',
+                  style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
+                ),
+              ],
               const SizedBox(height: 16),
 
               AppDropdownField(
@@ -241,8 +294,9 @@ class _BarangFormScreenState extends State<BarangFormScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Barang yang sudah punya catatan masuk/keluar tidak bisa '
-                  'dihapus.',
+                  'Barang yang sudah punya catatan masuk/keluar, atau termasuk '
+                  'Master Logistik pusat, tidak bisa dihapus (catatan & stok '
+                  'tidak boleh hilang).',
                   style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
                 ),
               ],
