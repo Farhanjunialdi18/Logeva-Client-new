@@ -32,6 +32,8 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
 2. Isi password baru, misal `posko2026` (min. 8 karakter, huruf + angka) → **SIMPAN PASSWORD**.
    - [ ] Masuk ke beranda admin. `admin123` sekarang ditolak saat login ulang.
 3. Settings → **Profil Admin**: ganti email ke email yang bisa dihubungi → **SIMPAN PROFIL**.
+   Settings → **Kata Sandi Posko**: buat kata sandi (misal `SandiPosko2026`) → **SIMPAN KATA SANDI**.
+   - [ ] Sebelum diatur, Ekspor Paket menampilkan peringatan dan tombol ekspor tidak aktif.
 4. Tab **Data** → **DATA POSKO** → **+ TAMBAH POSKO**: isi nama, desa (sama dengan nama desa di website),
    alamat, luas (misal 1050), latitude & longitude → **SIMPAN POSKO**.
    - [ ] Kapasitas terhitung otomatis (1050 m² → 300 orang).
@@ -110,13 +112,16 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
 
 ## Skenario 8: Impor di website pusat (boleh pakai internet)
 
-1. Website → login admin → sidebar **Import Paket Posko** → upload `paket_....zip` → **Lihat Pratinjau**.
+1. Website → login admin → sidebar **Import Paket Posko** → upload `paket_....zip`, isi **Kata sandi posko**
+   → **Lihat Pratinjau**.
+   - [ ] Tanpa / salah kata sandi: muncul pesan "dikunci kata sandi posko" / "Kata sandi posko salah".
    - [ ] Tertulis "dari HP Induk (supervisor)". Posko baru meminta **Pilih relawan**.
 2. Pilih relawan website → **Konfirmasi Gabung**.
    - [ ] Lokasi baru muncul; detail Lokasi menampilkan **Petugas Lapangan (Aplikasi Offline)** dengan
          admin & relawan, masing-masing satu kali.
    - [ ] Jumlah pengungsi & stok sama dengan di HP Induk.
-3. Upload paket yang sama lagi (atau paket dari HP 2).
+3. Upload paket yang sama lagi (atau paket dari HP 2) **tanpa** mengisi kata sandi.
+   - [ ] Tetap terbuka (website mengingat kata sandi posko).
    - [ ] Pratinjau: data "Tidak berubah" / "Dilewati"; setelah konfirmasi tidak ada data dobel, stok tidak bertambah.
 4. Hapus file paket dari flashdisk.
 
@@ -151,7 +156,8 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
 
 1. HP Induk: Settings → **Cadangan & Pemulihan** → **SIMPAN CADANGAN KE FILE** (atau kirim ke HP lain).
 2. HP 3 (pengganti, aplikasi baru dipasang): layar awal → **Pulihkan HP pengganti dari cadangan** →
-   pilih file → periksa isi → **PULIHKAN**.
+   pilih file → masukkan **kata sandi posko** → periksa isi → **PULIHKAN**.
+   - [ ] Kata sandi salah ditolak dan boleh dicoba lagi.
    - [ ] Login admin dengan password yang sama seperti di HP Induk lama. Data posko, pengungsi, logistik sama.
 3. HP 2 (Anggota): kirim file sinkron ke HP 3 → [ ] diterima (HP 3 dikenali sebagai HP Induk yang sama).
 4. Jangan pakai HP Induk lama dan HP 3 bersamaan sebagai HP Induk.

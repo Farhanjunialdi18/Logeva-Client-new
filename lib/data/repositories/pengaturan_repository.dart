@@ -105,4 +105,17 @@ class PengaturanRepository {
     assert(peran == peranInduk || peran == peranAnggota);
     await set(kunciPeranPerangkat, peran);
   }
+
+  // ---------------- KATA SANDI POSKO ----------------
+  // Mengunci Paket Data Posko & Cadangan (berkas_terkunci.dart). Dibuat
+  // supervisor di HP Induk, ikut ke HP Anggota lewat penyiapan/sinkron.
+  // Disimpan di HP ini karena HP sendiri sudah berisi datanya.
+
+  static const String kunciKataSandiBerkas = 'kata_sandi_berkas';
+
+  /// Kosong = belum diatur (paket & cadangan belum bisa dibuat).
+  Future<String> kataSandiBerkas() async => await get(kunciKataSandiBerkas) ?? '';
+
+  Future<void> setKataSandiBerkas(String kataSandi) =>
+      set(kunciKataSandiBerkas, kataSandi);
 }

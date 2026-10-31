@@ -56,6 +56,8 @@ class FilePenyiapan {
 
   String get kodePerangkatInduk => json['kode_perangkat_induk'] as String;
   String get saltPin => json['salt_pin'] as String;
+  /// Kata sandi posko untuk mengunci paket & cadangan (kosong = file lama).
+  String get kataSandiBerkas => json['kata_sandi_berkas'] as String? ?? '';
   Map<String, Object?> get posko => (json['posko'] as Map).cast();
   String get namaPosko => posko['nama'] as String;
   String get kodePosko => posko['kode'] as String;
@@ -159,6 +161,7 @@ class PenyiapanService {
       'dibuat_oleh': dibuatOleh,
       'kode_perangkat_induk': await pengaturan.kodePerangkat(),
       'salt_pin': await pengaturan.saltPin(),
+      'kata_sandi_berkas': await pengaturan.kataSandiBerkas(),
       'posko': posko.toMap()..remove('id'),
       'kategori': [
         for (final k in await barangRepo.getKategori()) {'id': k.id, 'nama': k.nama},
@@ -255,6 +258,9 @@ class PenyiapanService {
     await pengaturan.set(PengaturanRepository.kunciSaltPin, file.saltPin);
     await pengaturan.set(kunciKodeInduk, file.kodePerangkatInduk);
     await pengaturan.set(kunciKodePosko, file.kodePosko);
+    if (file.kataSandiBerkas.isNotEmpty) {
+      await pengaturan.setKataSandiBerkas(file.kataSandiBerkas);
+    }
 
     final poskoId = await _terapkanPosko(s, file.posko);
     await _terapkanMaster(s, file);

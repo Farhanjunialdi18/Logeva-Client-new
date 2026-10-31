@@ -31,6 +31,7 @@ void main() {
     final admin = AdminRepository.withStore(asal);
     await admin.ensureDefaultAdmin();
     await admin.gantiPassword((await admin.getAll()).single, 'posko2026');
+    await PengaturanRepository.withStore(asal).setKataSandiBerkas('posko2026');
     final posko = await PoskoRepository.withStore(asal).add(Posko.baru(nama: 'Balai Desa'));
     for (final nama in ['Siti', 'Budi']) {
       await PengungsiRepository.withStore(asal).add(Pengungsi.baru(
@@ -50,7 +51,11 @@ void main() {
     final (nama, bytes) = await CadanganService.buat(store: asal);
     expect(nama, startsWith('cadangan_logeva_'));
 
-    final file = CadanganService.baca(bytes);
+    expect(() => CadanganService.baca(bytes),
+        throwsA(isA<CadanganException>().having((e) => e.perluKataSandi, 'perlu kata sandi', isTrue)));
+    expect(() => CadanganService.baca(bytes, kataSandi: 'salah123'),
+        throwsA(isA<CadanganException>().having((e) => e.message, 'pesan', 'Kata sandi posko salah.')));
+    final file = CadanganService.baca(bytes, kataSandi: 'posko2026');
     expect(file.namaPosko, ['Balai Desa']);
     expect(file.jumlahPengungsiAktif, 2);
     expect(file.dariAnggota, isFalse);
@@ -78,7 +83,7 @@ void main() {
 
   test('pemulihan gagal di tengah: data HP tidak berubah', () async {
     final (_, bytes) = await CadanganService.buat(store: asal);
-    final file = CadanganService.baca(bytes);
+    final file = CadanganService.baca(bytes, kataSandi: 'posko2026');
     // Rusak: kolom yang tidak ada di tabel pengungsi.
     file.tabel[DatabaseTables.pengungsi]!.first['kolom_aneh'] = 1;
 
@@ -86,6 +91,12 @@ void main() {
     await expectLater(CadanganService.pulihkan(file, store: baru),
         throwsA(isA<CadanganException>()));
     expect((await PoskoRepository.withStore(baru).getAll()).map((p) => p.nama), ['Tetap ada']);
+  });
+
+  test('tanpa kata sandi posko cadangan belum bisa dibuat', () async {
+    await PengaturanRepository.withStore(asal).setKataSandiBerkas('');
+    await expectLater(CadanganService.buat(store: asal),
+        throwsA(isA<CadanganException>().having((e) => e.message, 'pesan', contains('Kata Sandi Posko'))));
   });
 
   test('file bukan cadangan ditolak dengan pesan jelas', () {

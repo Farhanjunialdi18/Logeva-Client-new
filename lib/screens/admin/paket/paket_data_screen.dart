@@ -8,8 +8,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/data_events.dart';
+import '../../../data/repositories/pengaturan_repository.dart';
 import '../../../data/repositories/posko_repository.dart';
 import '../../../models/posko.dart';
+import '../settings/kata_sandi_posko_screen.dart';
 import '../../../services/paket_data_service.dart';
 import '../../../services/transfer_service.dart';
 import '../../../theme/app_colors.dart';
@@ -56,11 +58,16 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
       ? _daftarPosko
       : _daftarPosko.where((p) => p.nama == _pilihan).toList();
 
+  /// Paket dikunci kata sandi posko; tanpa kata sandi belum bisa ekspor.
+  bool _adaKataSandi = true;
+
   Future<void> _load() async {
     final posko = await PoskoRepository.instance.getAll()
       ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+    final kataSandi = await PengaturanRepository.instance.kataSandiBerkas();
     if (!mounted) return;
     setState(() {
+      _adaKataSandi = kataSandi.isNotEmpty;
       _daftarPosko = posko;
       if (_pilihan != _semuaPosko && !posko.any((p) => p.nama == _pilihan)) {
         _pilihan = _semuaPosko;
@@ -228,11 +235,28 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
               ),
               const SizedBox(height: 20),
 
+              if (!_adaKataSandi) ...[
+                Text(
+                  '⚠ ${PaketDataService.pesanBelumAdaKataSandi}',
+                  style: AppTextStyles.small(AppPalette.of(context))
+                      .copyWith(color: AppColors.sun),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const KataSandiPoskoScreen()));
+                    _load();
+                  },
+                  child: const Text('Atur kata sandi posko'),
+                ),
+                const SizedBox(height: 8),
+              ],
               PrimaryButton(
                 text: 'EKSPOR PAKET (ZIP)',
                 isLoading: _menyimpan,
-                onPressed:
-                    periksa == null || !periksa.bisaEkspor ? null : _ekspor,
+                onPressed: periksa == null || !periksa.bisaEkspor || !_adaKataSandi
+                    ? null
+                    : _ekspor,
               ),
             ],
             const SizedBox(height: 24),

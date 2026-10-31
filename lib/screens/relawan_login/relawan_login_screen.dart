@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../core/app_constants.dart';
+import '../../data/repositories/relawan_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
@@ -31,6 +32,24 @@ class _RelawanLoginScreenState extends State<RelawanLoginScreen> {
   String _pin = '';
   bool _isLoading = false;
   String? _errorMessage;
+
+  /// Petunjuk "Demo PIN" hanya tampil di mode pengembangan DAN kalau PIN itu
+  /// memang bisa dipakai: belum ada akun relawan (PIN demo, lihat AuthService)
+  /// atau data demo Chrome yang punya relawan dengan PIN tersebut.
+  bool _tampilPinDemo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kDebugMode) _cekPinDemo();
+  }
+
+  Future<void> _cekPinDemo() async {
+    final repo = RelawanRepository.instance;
+    final berlaku = await repo.count() == 0 ||
+        await repo.findByPin(AuthService.demoRelawanPin) != null;
+    if (mounted) setState(() => _tampilPinDemo = berlaku);
+  }
 
   void _addDigit(String digit) {
     if (_isLoading || _pin.length >= AppConstants.pinLength) return;
@@ -149,8 +168,8 @@ class _RelawanLoginScreenState extends State<RelawanLoginScreen> {
             const SizedBox(height: 14),
             const BackLink(),
 
-            // ---- PIN demo (hanya muncul saat mode debug) ----
-            if (kDebugMode) ...[
+            // ---- PIN demo (mode debug & belum ada akun relawan) ----
+            if (kDebugMode && _tampilPinDemo) ...[
               const SizedBox(height: 8),
               Center(
                 child: Text(

@@ -21,6 +21,7 @@ import '../../widgets/app_background.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/info_card.dart';
 import '../../widgets/langkah_card.dart';
+import '../../widgets/minta_kata_sandi_dialog.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/secondary_button.dart';
@@ -71,7 +72,8 @@ class _CadanganScreenState extends State<CadanganScreen> {
     try {
       final f = await FileService.pickZip();
       if (f == null) return;
-      final file = CadanganService.baca(f.bytes);
+      final file = await _bacaDenganKataSandi(f.bytes);
+      if (file == null) return;
       final kosong = await CadanganService.hpKosong();
       if (!mounted) return;
       setState(() {
@@ -89,6 +91,23 @@ class _CadanganScreenState extends State<CadanganScreen> {
       if (mounted) AppSnackbar.show(context, e.message, isError: true);
     } finally {
       if (mounted) setState(() => _sibuk = false);
+    }
+  }
+
+  /// Baca cadangan; kalau terkunci, minta kata sandi posko (boleh ulang
+  /// kalau salah). null = dibatalkan.
+  Future<FileCadangan?> _bacaDenganKataSandi(List<int> bytes) async {
+    String? kataSandi;
+    String? salah;
+    while (true) {
+      try {
+        return CadanganService.baca(bytes, kataSandi: kataSandi);
+      } on CadanganException catch (e) {
+        if (!e.perluKataSandi || !mounted) rethrow;
+        if (kataSandi != null) salah = e.message;
+        kataSandi = await MintaKataSandiDialog.show(context, pesanSalah: salah);
+        if (kataSandi == null) return null;
+      }
     }
   }
 

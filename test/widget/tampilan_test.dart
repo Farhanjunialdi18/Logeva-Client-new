@@ -43,6 +43,7 @@ import 'package:flutter_application_1/screens/ringkasan/ringkasan_posko_screen.d
 import 'package:flutter_application_1/screens/admin/kelola_admin/kelola_admin_screen.dart';
 import 'package:flutter_application_1/screens/admin/kelola_relawan/kelola_relawan_screen.dart';
 import 'package:flutter_application_1/screens/admin/posko/siapkan_anggota_screen.dart';
+import 'package:flutter_application_1/screens/admin/settings/kata_sandi_posko_screen.dart';
 import 'package:flutter_application_1/screens/admin/settings/keamanan_screen.dart';
 import 'package:flutter_application_1/screens/penyiapan/terima_penyiapan_screen.dart';
 import 'package:flutter_application_1/screens/role_selection/role_selection_screen.dart';
@@ -253,6 +254,11 @@ void main() {
 
   // ---------------- KESIAPAN LAPANGAN (27 Okt) ----------------
   layar('Cadangan & pemulihan', () async => const CadanganScreen(), sebagaiAdmin: true);
+  layar('Kata sandi posko', () async => const KataSandiPoskoScreen(), sebagaiAdmin: true);
+  layar('Kata sandi posko', () async => const KataSandiPoskoScreen(),
+      sebagaiAdmin: true, hpAnggota: true);
+  layar('Ekspor paket (belum ada kata sandi)', () async => const PaketDataScreen(),
+      sebagaiAdmin: true);
   layar('Pulihkan dari layar awal', () async => const CadanganScreen(dariLayarAwal: true));
   layar('Laporan harian semua posko', () async => const LaporanHarianScreen(),
       sebagaiAdmin: true);

@@ -14,6 +14,7 @@ import '../../../widgets/logout_button.dart';
 import '../../../widgets/menu_card.dart';
 import '../../../widgets/page_header.dart';
 import '../../cadangan/cadangan_screen.dart';
+import 'kata_sandi_posko_screen.dart';
 import 'keamanan_screen.dart';
 import 'pengaturan_data_screen.dart';
 import 'penyimpanan_screen.dart';
@@ -102,6 +103,14 @@ class AdminSettingsScreen extends StatelessWidget {
             title: 'Penyimpanan',
             description: 'Informasi penyimpanan lokal',
             onTap: () => buka(const PenyimpananScreen()),
+          ),
+          const SizedBox(height: 12),
+          MenuCard(
+            icon: Icons.lock_rounded,
+            iconColor: AppColors.accentAmber,
+            title: 'Kata Sandi Posko',
+            description: 'Mengunci paket ke pusat & file cadangan',
+            onTap: () => buka(const KataSandiPoskoScreen()),
           ),
           const SizedBox(height: 12),
           MenuCard(

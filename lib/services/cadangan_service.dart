@@ -22,12 +22,17 @@ import '../data/local_database.dart';
 import '../data/repositories/admin_repository.dart';
 import '../data/repositories/pengaturan_repository.dart';
 import '../data/table_store.dart';
+import '../utils/berkas_terkunci.dart';
 import '../utils/waktu_wib.dart';
 import 'perangkat_service.dart';
 
 class CadanganException implements Exception {
   final String message;
-  const CadanganException(this.message);
+
+  /// true = file dikunci kata sandi posko yang belum / salah diberikan.
+  final bool perluKataSandi;
+
+  const CadanganException(this.message, {this.perluKataSandi = false});
 
   @override
   String toString() => message;
@@ -80,10 +85,16 @@ class CadanganService {
   static TableStore _s(TableStore? store) => store ?? LocalDatabase.store;
 
   /// Hasil: (nama file, isi ZIP).
+  /// Hasil: (nama file, isi ZIP yang DIKUNCI kata sandi posko).
   static Future<(String, Uint8List)> buat({TableStore? store, DateTime? sekarang}) async {
     final s = _s(store);
     final waktu = sekarang ?? DateTime.now();
     final pengaturan = PengaturanRepository.withStore(s);
+    final kataSandi = await pengaturan.kataSandiBerkas();
+    if (kataSandi.isEmpty) {
+      throw const CadanganException('Kata sandi posko belum diatur. Supervisor '
+          'mengaturnya di HP Induk: Settings → Kata Sandi Posko.');
+    }
     final isi = <String, Object?>{};
     for (final t in tabel) {
       // getAll urut terbaru dulu; dibalik supaya id tersimpan berurutan.
@@ -100,11 +111,19 @@ class CadanganService {
     };
     final arsip = Archive()
       ..addFile(ArchiveFile.string(namaJson, jsonEncode(json)));
-    final bytes = Uint8List.fromList(ZipEncoder().encode(arsip));
+    final bytes = BerkasTerkunci.kunci(ZipEncoder().encode(arsip), kataSandi);
     return ('cadangan_logeva_${WaktuWib.capFile(waktu)}.zip', bytes);
   }
 
-  static FileCadangan baca(List<int> bytes) {
+  /// Baca file cadangan. [kataSandi] = kata sandi posko (file terkunci);
+  /// cadangan versi lama yang tidak terkunci tetap bisa dibaca.
+  static FileCadangan baca(List<int> berkas, {String? kataSandi}) {
+    final List<int> bytes;
+    try {
+      bytes = BerkasTerkunci.buka(berkas, kataSandi);
+    } on BerkasTerkunciException catch (e) {
+      throw CadanganException(e.message, perluKataSandi: e.perluKataSandi);
+    }
     final Map<String, Object?> json;
     try {
       final f = ZipDecoder().decodeBytes(bytes).findFile(namaJson);

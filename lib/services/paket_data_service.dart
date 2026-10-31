@@ -37,6 +37,7 @@ import '../models/pengungsi.dart';
 import '../models/posko.dart';
 import '../models/riwayat_transaksi.dart';
 import '../utils/angka.dart';
+import '../utils/berkas_terkunci.dart';
 import '../utils/tanggal.dart';
 import '../utils/waktu_wib.dart';
 import 'csv_service.dart';
@@ -397,12 +398,27 @@ class PaketDataService {
     return PeriksaPaket(penghalang: penghalang, peringatan: peringatan);
   }
 
+  static const String pesanBelumAdaKataSandi =
+      'Kata sandi posko belum diatur. Supervisor mengaturnya di HP Induk: '
+      'Settings → Kata Sandi Posko.';
+
+  /// Isi file paket yang disimpan: ZIP paket yang DIKUNCI kata sandi posko
+  /// (data pribadi pengungsi dibawa keluar posko). Melempar StateError kalau
+  /// kata sandi posko belum diatur.
+  static Future<Uint8List> berkasTerkunci(PaketData paket, {TableStore? store}) async {
+    final kataSandi = await PengaturanRepository.withStore(store ?? LocalDatabase.store)
+        .kataSandiBerkas();
+    if (kataSandi.isEmpty) throw StateError(pesanBelumAdaKataSandi);
+    return BerkasTerkunci.kunci(paket.zip, kataSandi);
+  }
+
   /// Simpan paket ke file ZIP (pengguna memilih lokasi, misal flashdisk).
   static Future<TransferResult> simpan(PaketData paket) async {
     try {
+      final berkas = await berkasTerkunci(paket);
       final saved = await FileService.saveBytes(
         paket.namaFile,
-        paket.zip,
+        berkas,
         dialogTitle: 'Simpan Paket Data Posko',
       );
       if (!saved) {
@@ -423,10 +439,13 @@ class PaketDataService {
       );
       return TransferResult(
         TransferStatus.success,
-        'Paket ${paket.namaFile} tersimpan.\n\nBawa file ini ke pusat lalu '
-        'impor di menu Import Paket Data Posko. Hapus file dari flashdisk '
-        'setelah diimpor karena berisi data pribadi.',
+        'Paket ${paket.namaFile} tersimpan dan dikunci kata sandi posko.\n\n'
+        'Bawa file ini ke pusat lalu impor di menu Import Paket Posko (pusat '
+        'mengetik kata sandi posko saat impor pertama). Hapus file dari '
+        'flashdisk setelah diimpor karena berisi data pribadi.',
       );
+    } on StateError catch (e) {
+      return TransferResult(TransferStatus.failed, e.message);
     } catch (e) {
       await RiwayatRepository.instance.log(
         jenis: RiwayatTransaksi.jenisExport,
