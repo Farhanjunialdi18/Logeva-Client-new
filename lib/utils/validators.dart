@@ -160,6 +160,19 @@ class Validators {
             '(mungkin tertukar dengan latitude).',
       );
 
+  /// Ketinggian (m dpl) boleh kosong; batas sama dengan website
+  /// (StoreLokasiRequest: -50 sampai 5000).
+  static String? ketinggian(String? value) {
+    if ((value ?? '').trim().isEmpty) return null;
+    final n = Angka.baca(value);
+    if (n == null) return 'Ketinggian harus berupa angka, contoh: 45 atau 12,5.';
+    if (n < Posko.ketinggianMin || n > Posko.ketinggianMaks) {
+      return 'Ketinggian harus antara ${Posko.ketinggianMin.toInt()} dan '
+          '${Posko.ketinggianMaks.toInt()} m dpl.';
+    }
+    return null;
+  }
+
   static String? _koordinat(
     String? value, {
     required double min,

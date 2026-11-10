@@ -39,6 +39,7 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
   late final TextEditingController _luas;
   late final TextEditingController _lat;
   late final TextEditingController _lng;
+  late final TextEditingController _tinggi;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
@@ -59,12 +60,15 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
     );
     _lat = TextEditingController(text: e?.latitude ?? '');
     _lng = TextEditingController(text: e?.longitude ?? '');
+    _tinggi = TextEditingController(
+      text: e?.ketinggianMdpl == null ? '' : Angka.tampil(e!.ketinggianMdpl!),
+    );
     _luas.addListener(() => setState(() {})); // perbarui kapasitas
   }
 
   @override
   void dispose() {
-    for (final c in [_nama, _desa, _alamat, _luas, _lat, _lng]) {
+    for (final c in [_nama, _desa, _alamat, _luas, _lat, _lng, _tinggi]) {
       c.dispose();
     }
     super.dispose();
@@ -85,6 +89,7 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
     final desa = _desa.text.trim();
     final alamat = _alamat.text.trim();
     final luas = Angka.baca(_luas.text);
+    final tinggi = Angka.baca(_tinggi.text);
 
     try {
       final Posko hasil;
@@ -96,6 +101,7 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
           luasLokasi: luas,
           latitude: _koordinat(_lat),
           longitude: _koordinat(_lng),
+          ketinggianMdpl: tinggi,
         );
         await PoskoRepository.instance.update(hasil);
       } else {
@@ -107,6 +113,7 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
             luasLokasi: luas,
             latitude: _koordinat(_lat),
             longitude: _koordinat(_lng),
+            ketinggianMdpl: tinggi,
           ),
         );
       }
@@ -212,7 +219,6 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
                 controller: _lng,
                 keyboardType: const TextInputType.numberWithOptions(
                     decimal: true, signed: true),
-                textInputAction: TextInputAction.done,
                 inputFormatters: [_formatAngka],
                 validator: Validators.longitude,
               ),
@@ -221,6 +227,23 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
                 'Koordinat boleh dikosongkan dulu, tetapi wajib diisi '
                 'sebelum mengekspor Paket Data Posko.',
                 style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
+              ),
+              const SizedBox(height: 16),
+
+              AppTextField(
+                label: 'Ketinggian (m dpl)',
+                hint: 'Meter di atas permukaan laut, contoh: 45',
+                controller: _tinggi,
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true, signed: true),
+                textInputAction: TextInputAction.done,
+                inputFormatters: [_formatAngka],
+                validator: Validators.ketinggian,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Boleh dikosongkan. Penting untuk tempat evakuasi tsunami.',
+                style: AppTextStyles.small(p),
               ),
               const SizedBox(height: 28),
 

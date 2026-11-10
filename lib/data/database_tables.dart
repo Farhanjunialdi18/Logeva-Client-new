@@ -16,7 +16,7 @@ class DatabaseTables {
   DatabaseTables._();
 
   static const String databaseName = 'logeva_client.db';
-  static const int version = 10;
+  static const int version = 11;
 
   // ---- Data lapangan (versi 1) ----
   static const String pengungsi = 'pengungsi';
@@ -447,6 +447,12 @@ class DatabaseTables {
     ],
   ];
 
+  /// Versi 11: ketinggian posko (meter di atas permukaan laut), sama dengan
+  /// kolom lokasis.ketinggian_mdpl di website. Kosong = belum diisi.
+  static const List<String> _v11 = [
+    'ALTER TABLE $posko ADD COLUMN ketinggian_mdpl REAL',
+  ];
+
   /// Perintah untuk HP yang baru pertama kali memasang aplikasi.
   static final List<String> createStatements = [
     ..._v1,
@@ -459,6 +465,7 @@ class DatabaseTables {
     ..._v8,
     ..._v9,
     ..._v10,
+    ..._v11,
   ];
 
   /// Perintah per versi, untuk HP yang memperbarui aplikasi.
@@ -475,5 +482,6 @@ class DatabaseTables {
     8: _v8,
     9: _v9,
     10: _v10,
+    11: _v11,
   };
 }

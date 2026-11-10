@@ -33,6 +33,10 @@ class Posko {
   /// Kapasitas = luas ÷ 3,5 m² per orang (LokasiImportController::M2_PER_ORANG).
   static const double m2PerOrang = 3.5;
 
+  /// Batas ketinggian (m dpl), sama dengan website (StoreLokasiRequest).
+  static const double ketinggianMin = -50;
+  static const double ketinggianMaks = 5000;
+
   final int? id;
   final String kode;
   final String nama; // nama_lokasi, contoh: 'Desa Panggarangan'
@@ -41,6 +45,10 @@ class Posko {
   final double? luasLokasi; // m², null = belum diisi
   final String latitude; // teks angka desimal, kosong = belum diisi
   final String longitude;
+
+  /// Ketinggian dari permukaan laut (m dpl), null = belum diisi.
+  /// Penting untuk tempat evakuasi tsunami (kolom lokasis.ketinggian_mdpl).
+  final double? ketinggianMdpl;
   final String statusOperasional;
   final DateTime? mulaiBeroperasiAt;
   final DateTime? selesaiBeroperasiAt;
@@ -56,6 +64,7 @@ class Posko {
     this.luasLokasi,
     this.latitude = '',
     this.longitude = '',
+    this.ketinggianMdpl,
     this.statusOperasional = siaga,
     this.mulaiBeroperasiAt,
     this.selesaiBeroperasiAt,
@@ -71,6 +80,7 @@ class Posko {
     double? luasLokasi,
     String latitude = '',
     String longitude = '',
+    double? ketinggianMdpl,
   }) {
     final now = DateTime.now();
     return Posko(
@@ -81,6 +91,7 @@ class Posko {
       luasLokasi: luasLokasi,
       latitude: latitude,
       longitude: longitude,
+      ketinggianMdpl: ketinggianMdpl,
       dibuatPada: now,
       diubahPada: now,
     );
@@ -177,6 +188,7 @@ class Posko {
       luasLokasi: luasLokasi,
       latitude: latitude,
       longitude: longitude,
+      ketinggianMdpl: ketinggianMdpl,
       statusOperasional: status,
       mulaiBeroperasiAt: mulai,
       selesaiBeroperasiAt: selesai,
@@ -193,6 +205,7 @@ class Posko {
     required double? luasLokasi,
     required String latitude,
     required String longitude,
+    required double? ketinggianMdpl,
   }) {
     return Posko(
       id: id,
@@ -203,6 +216,7 @@ class Posko {
       luasLokasi: luasLokasi,
       latitude: latitude,
       longitude: longitude,
+      ketinggianMdpl: ketinggianMdpl,
       statusOperasional: statusOperasional,
       mulaiBeroperasiAt: mulaiBeroperasiAt,
       selesaiBeroperasiAt: selesaiBeroperasiAt,
@@ -236,6 +250,7 @@ class Posko {
         'kapasitas_pengungsi': kapasitas,
         'latitude': latitude,
         'longitude': longitude,
+        'ketinggian_mdpl': ketinggianMdpl,
         'status_operasional': statusOperasional,
         'mulai_beroperasi_at': mulaiBeroperasiAt?.toIso8601String(),
         'selesai_beroperasi_at': selesaiBeroperasiAt?.toIso8601String(),
@@ -247,6 +262,7 @@ class Posko {
     final status = asText(map['status_operasional']);
     final dibuat = asDate(map['dibuat_pada']);
     final luas = map['luas_lokasi'];
+    final tinggi = map['ketinggian_mdpl'];
     return Posko(
       id: asInt(map['id']),
       kode: asText(map['kode']),
@@ -256,6 +272,8 @@ class Posko {
       luasLokasi: luas is num ? luas.toDouble() : double.tryParse(asText(luas)),
       latitude: asText(map['latitude']),
       longitude: asText(map['longitude']),
+      ketinggianMdpl:
+          tinggi is num ? tinggi.toDouble() : double.tryParse(asText(tinggi)),
       statusOperasional:
           const [beroperasi, selesai].contains(status) ? status : siaga,
       mulaiBeroperasiAt: asDateOrNull(map['mulai_beroperasi_at']),

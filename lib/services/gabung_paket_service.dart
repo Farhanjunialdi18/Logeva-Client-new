@@ -15,6 +15,18 @@
 //                Stok di aplikasi selalu dihitung dari catatan, jadi otomatis benar.
 //  - Paket yang dibuat oleh HP ini sendiri ditolak.
 //
+// PAKET DARI WEBSITE PUSAT (info.csv kolom sumber = 'website', dibuat di
+// menu Paket Data Posko → Export paket untuk aplikasi) hanya diterima lewat
+// periksaWebsite/terapkanWebsite di HP Induk. Bedanya:
+//  - Posko yang belum ada di HP ini DITAMBAHKAN (kode tetap kode website,
+//    jadi paket dari HP nanti dikenali website sebagai posko yang sama).
+//  - Posko dicocokkan dengan kode, lalu nama posko + desa (sama dengan
+//    website). Nama sama tapi desa berbeda = error, karena nama posko di
+//    HP harus unik.
+//  - Akun petugas (petugas.csv) dan foto tidak diambil: akun tetap dibuat
+//    admin di HP Induk.
+//  - Setelah digabung, stok di HP dibandingkan dengan stok website (stok.csv).
+//
 // Waktu dibandingkan per DETIK (paket menyimpan sampai detik). Data hasil
 // gabung menyimpan waktu dari paket, jadi ekspor ulang menghasilkan waktu sama.
 // ============================================================
@@ -37,6 +49,7 @@ import '../models/barang.dart';
 import '../models/catatan_logistik.dart';
 import '../models/pengungsi.dart';
 import '../models/posko.dart';
+import '../utils/angka.dart';
 import '../utils/kode_unik.dart';
 import '../utils/tanggal.dart';
 import '../utils/waktu_wib.dart';
@@ -78,7 +91,16 @@ class HasilGabung {
   final List<BarisGabung> keluar;
   final List<String> barangBaru;
 
+  /// Paket berasal dari website pusat.
+  final bool dariWebsite;
+
+  /// Stok yang berbeda antara HP ini dan website (hanya setelah paket
+  /// website digabung), contoh "Beras (Posko A): website 100 kg, HP 90 kg".
+  final List<String> selisihStok;
+
   const HasilGabung({
+    this.dariWebsite = false,
+    this.selisihStok = const [],
     required this.kodePerangkat,
     required this.dieksporOleh,
     required this.dibuatPada,
@@ -110,7 +132,12 @@ class HasilGabung {
   String get ringkasan {
     String n(Map<String, int> m, String k) => '${m[k] ?? 0}';
     final p = ringkasanPengungsi;
-    return 'Pengungsi: ${n(p, BarisGabung.tambah)} baru, '
+    final k = ringkasanPosko;
+    final posko = dariWebsite
+        ? 'Posko: ${n(k, BarisGabung.tambah)} baru, '
+            '${n(k, BarisGabung.perbarui)} diperbarui · '
+        : '';
+    return '${posko}Pengungsi: ${n(p, BarisGabung.tambah)} baru, '
         '${n(p, BarisGabung.perbarui)} diperbarui, ${n(p, BarisGabung.hapus)} dihapus · '
         'Barang masuk: ${n(ringkasanMasuk, BarisGabung.tambah)} · '
         'Barang keluar: ${n(ringkasanKeluar, BarisGabung.tambah)}';
@@ -135,6 +162,18 @@ class GabungPaketService {
   /// Gabungkan paket ke HP ini.
   static Future<HasilGabung> terapkan(List<int> bytes, {TableStore? store}) =>
       _proses(bytes, store ?? LocalDatabase.store, simpan: true);
+
+  /// Kunci pengaturan: paket website terakhir yang digabung
+  /// ("waktu paket|nama pengekspor").
+  static const String kunciImporWebsite = 'impor_website_terakhir';
+
+  /// Periksa paket dari WEBSITE pusat (sudah dibuka kuncinya) tanpa menyimpan.
+  static Future<HasilGabung> periksaWebsite(List<int> bytes, {TableStore? store}) =>
+      _proses(bytes, store ?? LocalDatabase.store, simpan: false, dariWebsite: true);
+
+  /// Gabungkan paket dari WEBSITE pusat ke HP ini (HP Induk).
+  static Future<HasilGabung> terapkanWebsite(List<int> bytes, {TableStore? store}) =>
+      _proses(bytes, store ?? LocalDatabase.store, simpan: true, dariWebsite: true);
 
   // ---------------- BACA ZIP ----------------
 
@@ -168,7 +207,7 @@ class GabungPaketService {
   // ---------------- PROSES ----------------
 
   static Future<HasilGabung> _proses(List<int> bytes, TableStore s,
-      {required bool simpan}) async {
+      {required bool simpan, bool dariWebsite = false}) async {
     final isi = _baca(bytes);
     final info = isi['info.csv']!.first;
     final pengaturan = PengaturanRepository.withStore(s);
@@ -176,34 +215,91 @@ class GabungPaketService {
       throw const GabungException(
           'Paket ini dibuat di HP ini sendiri. Pilih paket dari HP lain.');
     }
+    final sumberWebsite = info['sumber'] == 'website';
+    if (dariWebsite && !sumberWebsite) {
+      throw const GabungException(
+          'File ini bukan paket dari website pusat. File dari HP lain posko ini '
+          'diterima di menu Sinkron Antar-HP.');
+    }
+    if (!dariWebsite && sumberWebsite) {
+      throw const GabungException(
+          'File ini paket dari website pusat. Buka di HP Induk: menu Paket Data '
+          'Posko → Import dari Website.');
+    }
+    if (dariWebsite && await pengaturan.isAnggota()) {
+      throw const GabungException(
+          'Paket dari website hanya diimpor di HP Induk. HP Anggota menerima '
+          'datanya lewat Sinkron Antar-HP dari HP Induk.');
+    }
 
     // ---- posko ----
     final poskoRepo = PoskoRepository.withStore(s);
     final lokal = {for (final p in await poskoRepo.getAll()) p.kode: p};
-    final dikenal = <String, int>{}; // kode_posko -> id lokal
+    final dikenal = <String, int>{}; // kode_posko di paket -> id lokal
     final barisPosko = <BarisGabung>[];
+    var idSementara = -1; // posko baru saat pratinjau (belum disimpan)
     for (final r in isi['posko.csv']!) {
       final kode = r['kode_posko'] ?? '';
-      final nama = r['nama_lokasi'] ?? '-';
-      final ada = lokal[kode];
+      final nama = (r['nama_lokasi'] ?? '').trim();
+      final diubah = WaktuWib.baca(r['diubah_pada']);
+      var ada = lokal[kode];
+      var sambung = false;
+
+      if (ada == null && dariWebsite) {
+        // Sama dengan website: kode dulu, lalu nama posko + desa.
+        Posko? samaNama;
+        for (final p in lokal.values) {
+          if (_kunci(p.nama) == _kunci(nama)) samaNama = p;
+        }
+        if (samaNama != null) {
+          if (_kunci(samaNama.namaDesa) != _kunci(r['nama_desa'] ?? '')) {
+            barisPosko.add(BarisGabung(BarisGabung.error, nama,
+                'Nama posko sudah dipakai posko lain di HP ini (desa '
+                '"${samaNama.namaDesa}"). Ganti nama salah satu posko dulu.'));
+            continue;
+          }
+          ada = samaNama;
+          sambung = true;
+        }
+      }
+
       if (ada == null) {
-        barisPosko.add(BarisGabung(BarisGabung.lewati, nama,
-            'Posko tidak dikenal di HP ini (siapkan HP itu dari HP Induk posko ini)'));
+        if (!dariWebsite) {
+          barisPosko.add(BarisGabung(BarisGabung.lewati, nama.isEmpty ? '-' : nama,
+              'Posko tidak dikenal di HP ini (siapkan HP itu dari HP Induk posko ini)'));
+          continue;
+        }
+        if (!KodeUnik.valid(kode) || nama.isEmpty || diubah == null) {
+          barisPosko.add(BarisGabung(BarisGabung.error, nama.isEmpty ? '-' : nama,
+              'Kode posko, nama, atau diubah_pada tidak valid'));
+          continue;
+        }
+        final baru = _posko(null, r, diubah);
+        final id = simpan
+            ? await s.insert(DatabaseTables.posko, baru.toMap()..remove('id'))
+            : idSementara--;
+        dikenal[kode] = id;
+        lokal[kode] = Posko.fromMap(baru.toMap()..['id'] = id);
+        barisPosko.add(BarisGabung(BarisGabung.tambah, nama, 'Posko baru dari website'));
         continue;
       }
+
       dikenal[kode] = ada.id!;
-      final diubah = WaktuWib.baca(r['diubah_pada']);
+      final catatan = sambung ? 'Disambungkan ke posko yang sudah ada (nama + desa)' : '';
       if (diubah != null && _lebihBaru(diubah, ada.diubahPada)) {
         if (simpan) await s.update(DatabaseTables.posko, ada.id!, _posko(ada, r, diubah).toMap());
-        barisPosko.add(BarisGabung(BarisGabung.perbarui, nama, 'Data paket lebih baru'));
+        barisPosko.add(BarisGabung(BarisGabung.perbarui, nama,
+            sambung ? '$catatan & diperbarui' : 'Data paket lebih baru'));
       } else {
-        barisPosko.add(BarisGabung(BarisGabung.sama, nama));
+        barisPosko.add(BarisGabung(BarisGabung.sama, nama, catatan));
       }
     }
     if (dikenal.isEmpty) {
-      throw const GabungException(
-          'Posko di paket ini tidak ada di HP ini. Paket hanya bisa digabung '
-          'antar-HP posko yang sama (HP Anggota disiapkan dari HP Induk).');
+      throw GabungException(dariWebsite
+          ? 'Tidak ada posko yang bisa diambil dari paket ini.'
+              '${barisPosko.isEmpty ? '' : ' ${barisPosko.first.nama}: ${barisPosko.first.alasan}'}'
+          : 'Posko di paket ini tidak ada di HP ini. Paket hanya bisa digabung '
+              'antar-HP posko yang sama (HP Anggota disiapkan dari HP Induk).');
     }
 
     // ---- pengungsi ----
@@ -232,14 +328,22 @@ class GabungPaketService {
       barisKeluar.add(await _catatan(s, r, dikenal, kodeKeluar, barang, simpan, masuk: false));
     }
 
+    final selisih = <String>[];
     if (simpan) {
-      // Riwayat sinkron per HP pengirim: "waktu paket|nama pengekspor".
-      await pengaturan.set('$awalanRiwayat${info['kode_perangkat']}',
+      // Riwayat: per HP pengirim ("waktu paket|nama pengekspor"), atau
+      // paket website terakhir (tidak tampil di riwayat Sinkron Antar-HP).
+      await pengaturan.set(
+          dariWebsite ? kunciImporWebsite : '$awalanRiwayat${info['kode_perangkat']}',
           '${info['dibuat_pada'] ?? ''}|${info['diekspor_oleh'] ?? ''}');
+      if (dariWebsite) {
+        selisih.addAll(await _selisihStok(s, isi['stok.csv'] ?? const [], dikenal, lokal));
+      }
       DataEvents.instance.notifyChanged();
     }
 
     return HasilGabung(
+      dariWebsite: dariWebsite,
+      selisihStok: selisih,
       kodePerangkat: info['kode_perangkat'] ?? '',
       dieksporOleh: info['diekspor_oleh'] ?? '',
       dibuatPada: info['dibuat_pada'] ?? '',
@@ -258,24 +362,64 @@ class GabungPaketService {
   static DateTime? _waktuOpsional(String? teks) =>
       (teks ?? '').trim().isEmpty ? null : WaktuWib.baca(teks);
 
-  static Posko _posko(Posko ada, Map<String, String> r, DateTime diubah) => Posko(
-        id: ada.id,
-        kode: ada.kode,
-        nama: r['nama_lokasi'] ?? ada.nama,
-        namaDesa: r['nama_desa'] ?? ada.namaDesa,
-        alamat: r['alamat_lokasi'] ?? ada.alamat,
-        luasLokasi: double.tryParse(r['luas_lokasi'] ?? '') ?? ada.luasLokasi,
-        latitude: r['latitude'] ?? ada.latitude,
-        longitude: r['longitude'] ?? ada.longitude,
+  /// Nama untuk dicocokkan: tanpa beda huruf besar/kecil & spasi ganda.
+  static String _kunci(String teks) =>
+      teks.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+  /// Posko dari baris posko.csv. [ada] = posko di HP ini (null = posko baru,
+  /// kodenya diambil dari paket). Paket tanpa kolom ketinggian_mdpl (aplikasi
+  /// versi lama) tidak mengubah ketinggian.
+  static Posko _posko(Posko? ada, Map<String, String> r, DateTime diubah) => Posko(
+        id: ada?.id,
+        kode: ada?.kode ?? r['kode_posko']!,
+        nama: (r['nama_lokasi'] ?? '').trim().isEmpty ? ada!.nama : r['nama_lokasi']!.trim(),
+        namaDesa: r['nama_desa'] ?? ada?.namaDesa ?? '',
+        alamat: r['alamat_lokasi'] ?? ada?.alamat ?? '',
+        luasLokasi: double.tryParse(r['luas_lokasi'] ?? '') ?? ada?.luasLokasi,
+        latitude: r['latitude'] ?? ada?.latitude ?? '',
+        longitude: r['longitude'] ?? ada?.longitude ?? '',
+        ketinggianMdpl: r.containsKey('ketinggian_mdpl')
+            ? Angka.baca(r['ketinggian_mdpl'])
+            : ada?.ketinggianMdpl,
         statusOperasional: const [Posko.siaga, Posko.beroperasi, Posko.selesai]
                 .contains(r['status_operasional'])
             ? r['status_operasional']!
-            : ada.statusOperasional,
+            : ada?.statusOperasional ?? Posko.siaga,
         mulaiBeroperasiAt: _waktuOpsional(r['mulai_beroperasi_at']),
         selesaiBeroperasiAt: _waktuOpsional(r['selesai_beroperasi_at']),
-        dibuatPada: ada.dibuatPada,
+        dibuatPada: ada?.dibuatPada ?? diubah,
         diubahPada: diubah,
       );
+
+  /// Bandingkan stok website (stok.csv) dengan stok HP ini (dihitung dari
+  /// catatan) untuk posko di paket. Barang yang tidak ada di salah satu
+  /// sisi dianggap stok 0.
+  static Future<List<String>> _selisihStok(TableStore s, List<Map<String, String>> stok,
+      Map<String, int> dikenal, Map<String, Posko> lokal) async {
+    final namaPosko = {for (final p in lokal.values) p.id: p.nama};
+    final logistik = LogistikRepository.withStore(s);
+    final hasil = <String>[];
+    for (final MapEntry(key: kode, value: id) in dikenal.entries) {
+      final website = <String, (int, String)>{};
+      for (final r in stok.where((r) => r['kode_posko'] == kode)) {
+        final nama = r['nama_item'] ?? '';
+        website[_kunci(nama)] = (int.tryParse(r['jumlah_stok'] ?? '') ?? 0, r['satuan'] ?? '');
+      }
+      final hp = {
+        for (final b in await logistik.getStok(id)) _kunci(b.barang.namaItem): b,
+      };
+      final semua = {...website.keys, ...hp.keys};
+      for (final k in semua) {
+        final w = website[k]?.$1 ?? 0;
+        final h = hp[k]?.jumlah ?? 0;
+        if (w == h) continue;
+        final nama = hp[k]?.barang.namaItem ?? k;
+        final satuan = hp[k]?.barang.satuan ?? website[k]?.$2 ?? '';
+        hasil.add('$nama (${namaPosko[id] ?? '-'}): website $w $satuan, HP $h $satuan');
+      }
+    }
+    return hasil;
+  }
 
   static Future<BarisGabung> _pengungsi(
     TableStore s,

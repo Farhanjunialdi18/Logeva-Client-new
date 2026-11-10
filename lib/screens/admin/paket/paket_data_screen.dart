@@ -3,6 +3,7 @@
 // EKSPOR PAKET DATA POSKO (admin lokal): pilih posko, periksa
 // kelengkapan, baca peringatan data pribadi, lalu simpan file ZIP
 // (misal ke flashdisk) untuk dibawa ke pusat.
+// Di bawahnya: IMPORT paket dari website pusat (impor_website_bagian.dart).
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import '../../../data/repositories/pengaturan_repository.dart';
 import '../../../data/repositories/posko_repository.dart';
 import '../../../models/posko.dart';
 import '../settings/kata_sandi_posko_screen.dart';
+import 'impor_website_bagian.dart';
 import '../../../services/paket_data_service.dart';
 import '../../../services/transfer_service.dart';
 import '../../../theme/app_colors.dart';
@@ -138,7 +140,7 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
           children: [
             PageHeader(
               title: 'Paket Data Posko',
-              subtitle: 'Ekspor data untuk dibawa ke pusat lewat USB',
+              subtitle: 'Ekspor ke pusat lewat USB · import dari website',
               onBack: () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: 16),
@@ -258,6 +260,12 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
                     ? null
                     : _ekspor,
               ),
+            ],
+            if (!_loading) ...[
+              const SizedBox(height: 28),
+              const Divider(),
+              const SizedBox(height: 16),
+              const ImporWebsiteBagian(),
             ],
             const SizedBox(height: 24),
           ],

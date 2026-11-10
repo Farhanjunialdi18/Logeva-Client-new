@@ -118,6 +118,9 @@ class PaketData {
     'kapasitas_pengungsi', 'latitude', 'longitude', 'status_operasional',
     'mulai_beroperasi_at', 'selesai_beroperasi_at',
     'relawan_penanggung_jawab', 'diubah_pada',
+    // Sejak 10 Nov 2026 (versi format tetap '1'; paket tanpa kolom ini =
+    // ketinggian tidak diubah).
+    'ketinggian_mdpl',
   ];
   static const List<String> kolomPengungsi = [
     'kode', 'kode_posko', 'nama', 'asal', 'tanggal_lahir', 'nomor_kk', 'usia',
@@ -188,6 +191,10 @@ class PaketData {
             _waktu(p.selesaiBeroperasiAt),
             (relawan[p.id] ?? const []).join(', '),
             _waktu(p.diubahPada),
+            // 2 desimal, sama dengan kolom website (decimal 7,2)
+            p.ketinggianMdpl == null
+                ? ''
+                : Angka.ekspor(double.parse(p.ketinggianMdpl!.toStringAsFixed(2))),
           ],
       ]),
       'pengungsi.csv': CsvService.encode(kolomPengungsi, [

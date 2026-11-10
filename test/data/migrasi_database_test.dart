@@ -301,6 +301,7 @@ void main() {
         luasLokasi: null,
         latitude: '',
         longitude: '',
+        ketinggianMdpl: null,
       ));
       expect((await repo.getByPosko(posko.id)).single.posko, 'Baru');
       expect((await poskoRepo.findById(posko.id!))!.kode, posko.kode);

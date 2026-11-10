@@ -199,6 +199,12 @@ class _PoskoDetailScreenState extends State<PoskoDetailScreen> {
                         : '${posko.latitude}, ${posko.longitude}',
                   ),
                   DetailRow(
+                    label: 'Ketinggian',
+                    value: posko.ketinggianMdpl == null
+                        ? '-'
+                        : '${Angka.tampil(posko.ketinggianMdpl!)} m dpl',
+                  ),
+                  DetailRow(
                     label: 'Status',
                     child: Text(
                       posko.hariKe() == null

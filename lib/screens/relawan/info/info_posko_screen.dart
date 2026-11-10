@@ -133,6 +133,9 @@ class _InfoPoskoScreenState extends State<InfoPoskoScreen> {
                   'Koordinat': posko.latitude.isEmpty
                       ? '-'
                       : '${posko.latitude}, ${posko.longitude}',
+                  'Ketinggian': posko.ketinggianMdpl == null
+                      ? '-'
+                      : '${Angka.tampil(posko.ketinggianMdpl!)} m dpl',
                   'Dicatat sejak': Tanggal.tampil(posko.dibuatPada),
                 },
               ),

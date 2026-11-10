@@ -12,7 +12,12 @@ import '../theme/app_text_styles.dart';
 class MintaKataSandiDialog {
   MintaKataSandiDialog._();
 
-  static Future<String?> show(BuildContext context, {String? pesanSalah}) {
+  static const String pesanPosko = 'File ini dikunci. Masukkan kata sandi posko '
+      'yang dibuat supervisor di HP Induk.';
+
+  /// [pesan] & [judul] = kata sandi mana yang diminta (bawaan: kata sandi posko).
+  static Future<String?> show(BuildContext context,
+      {String? pesanSalah, String pesan = pesanPosko, String judul = 'Kata sandi posko'}) {
     final teks = TextEditingController();
     return showDialog<String>(
       context: context,
@@ -25,13 +30,12 @@ class MintaKataSandiDialog {
 
         return AlertDialog(
           backgroundColor: p.surface,
-          title: Text('Kata sandi posko', style: AppTextStyles.cardTitle(p)),
+          title: Text(judul, style: AppTextStyles.cardTitle(p)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('File ini dikunci. Masukkan kata sandi posko yang dibuat '
-                  'supervisor di HP Induk.', style: AppTextStyles.small(p)),
+              Text(pesan, style: AppTextStyles.small(p)),
               if (pesanSalah != null) ...[
                 const SizedBox(height: 8),
                 Text(pesanSalah,
@@ -44,7 +48,7 @@ class MintaKataSandiDialog {
                 obscureText: true,
                 style: AppTextStyles.input(p),
                 onSubmitted: (_) => kirim(),
-                decoration: const InputDecoration(hintText: 'Kata sandi posko'),
+                decoration: InputDecoration(hintText: judul),
               ),
             ],
           ),
