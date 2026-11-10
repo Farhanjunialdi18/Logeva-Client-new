@@ -431,6 +431,15 @@ void main() {
     expect(find.text('EXPORT CSV'), findsNothing);
   });
 
+  testWidgets('kelola relawan: lama akun dibuat tampil', (tester) async {
+    SessionService.instance.startAdmin(admin);
+    await cek(tester, KelolaRelawanScreen(onBack: () {}), gelap: true, skalaTeks: 1.3);
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Akun dibuat'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('HP Anggota: tombol kelola diganti keterangan HP Induk',
       (tester) async {
     PerangkatService.anggota.value = true;

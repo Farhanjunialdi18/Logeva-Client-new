@@ -11,6 +11,7 @@ import '../../../data/repositories/posko_repository.dart';
 import '../../../data/repositories/relawan_repository.dart';
 import '../../../models/relawan.dart';
 import '../../../theme/app_colors.dart';
+import '../../../utils/date_formatter.dart';
 import '../../../widgets/account_tile.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/app_dropdown_field.dart';
@@ -163,7 +164,11 @@ class _KelolaRelawanScreenState extends State<KelolaRelawanScreen> {
                 icon: Icons.volunteer_activism_rounded,
                 iconColor: AppColors.primary,
                 title: relawan.nama,
-                lines: [relawan.poskoLabel, 'PIN: ••••••'],
+                lines: [
+                  relawan.poskoLabel,
+                  'PIN: ••••••',
+                  'Akun dibuat ${DateFormatter.lamaSejak(relawan.dibuatPada)}',
+                ],
                 aktif: relawan.isAktif,
                 onTap: () => _bukaDetail(relawan),
               ),

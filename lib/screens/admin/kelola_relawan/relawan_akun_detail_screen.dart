@@ -204,7 +204,8 @@ class _RelawanAkunDetailScreenState extends State<RelawanAkunDetailScreen> {
                   ),
                   DetailRow(
                     label: 'Dibuat',
-                    value: DateFormatter.date(relawan.dibuatPada),
+                    value: '${DateFormatter.date(relawan.dibuatPada)} '
+                        '(${DateFormatter.lamaSejak(relawan.dibuatPada)})',
                   ),
                   DetailRow(
                     label: 'Terakhir digunakan',

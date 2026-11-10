@@ -1,8 +1,8 @@
 // ============================================================
 // paket_data_screen.dart
-// EKSPOR PAKET DATA POSKO (admin lokal): pilih posko, periksa
+// PAKET DATA POSKO (admin lokal): EKSPOR ke pusat (pilih posko, periksa
 // kelengkapan, baca peringatan data pribadi, lalu simpan file ZIP
-// (misal ke flashdisk) untuk dibawa ke pusat.
+// (misal ke flashdisk) untuk dibawa ke pusat).
 // Di bawahnya: IMPORT paket dari website pusat (impor_website_bagian.dart).
 // ============================================================
 

@@ -105,7 +105,7 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
 
 ## Skenario 7: Ekspor ke pusat
 
-1. HP Induk: Data → **EKSPOR PAKET DATA POSKO** → pilih posko.
+1. HP Induk: Data → **PAKET DATA POSKO** → bagian ekspor → pilih posko.
    - [ ] Terlihat isi paket & daftar petugas (admin + relawan, beserta kontak). Tidak ada peringatan merah.
 2. **EKSPOR PAKET (ZIP)** → konfirmasi data pribadi → simpan ke flashdisk / folder.
 3. (Opsional) Lakukan juga dari HP 2 untuk menguji paket dari HP Anggota.

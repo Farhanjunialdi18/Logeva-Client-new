@@ -289,10 +289,10 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
           ),
           const SizedBox(height: 12),
           MenuCard(
-            icon: Icons.archive_rounded,
+            icon: Icons.swap_vert_rounded,
             iconColor: AppColors.success,
-            title: 'EKSPOR PAKET DATA POSKO',
-            description: 'File ZIP untuk dibawa ke pusat lewat USB',
+            title: 'PAKET DATA POSKO',
+            description: 'Ekspor ke pusat & impor dari website (file ZIP)',
             onTap: () => widget.onOpenDataPage(AdminDataPage.paket),
           ),
           const SizedBox(height: 24),
