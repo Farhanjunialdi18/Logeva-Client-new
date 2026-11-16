@@ -8,7 +8,8 @@ class AppConstants {
 
   static const String appName = 'LOGEVA Client';
   static const String appVersion = '1.0.0'; // samakan dengan pubspec.yaml
-  static const String appTagline = 'Sistem Pendataan Kebencanaan';
+  static const String appTagline =
+      'Sistem Informasi Geografis Manajemen TEA dan Logistik';
   static const String organization = 'Gugus Mitigasi Lebak Selatan';
 
   /// Path logo. Ganti file ini dengan logo GMLS asli.
