@@ -5,12 +5,18 @@
 // isinya, lalu terapkan. Tanpa internet sama sekali.
 // ============================================================
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
+import '../../routes/app_routes.dart';
 import '../../services/berkas_masuk_service.dart';
 import '../../services/file_service.dart';
+import '../../services/gabung_paket_service.dart';
 import '../../services/penyiapan_service.dart';
 import '../../services/perangkat_service.dart';
+import '../../services/session_service.dart';
+import '../../services/sinkron_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_snackbar.dart';
@@ -30,6 +36,9 @@ class TerimaPenyiapanScreen extends StatefulWidget {
 
 class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
   FilePenyiapan? _file;
+  Uint8List? _bytes;
+  /// Data posko yang ikut di file (null = file lama, hanya akun).
+  ({int pengungsi, int masuk, int keluar})? _isiData;
   String? _namaFile;
   String? _ditolak; // alasan file tidak bisa dipakai di HP ini
   bool _sibuk = false;
@@ -54,6 +63,8 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
       if (!mounted) return;
       setState(() {
         _file = file;
+        _bytes = f.bytes;
+        _isiData = SinkronService.ringkasanIsi(f.bytes);
         _namaFile = f.name;
         _ditolak = alasan;
       });
@@ -71,11 +82,28 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
     if (file == null) return;
     setState(() => _sibuk = true);
     try {
-      final pesan = await PenyiapanService.terapkan(file);
+      var pesan = await PenyiapanService.terapkan(file);
+      // Data posko yang ikut di file langsung digabung ke HP ini.
+      final bytes = _bytes;
+      if (_isiData != null && bytes != null) {
+        try {
+          final hasil = await GabungPaketService.terapkan(bytes);
+          pesan = '$pesan Data posko tersinkron (${hasil.ringkasan}).';
+        } on GabungException catch (e) {
+          pesan = '$pesan Data posko belum masuk: ${e.message} Coba kirim '
+              'ulang file dari HP Induk.';
+        }
+      }
       await PerangkatService.muat();
       if (!mounted) return;
-      AppSnackbar.show(context, '$pesan Hapus file penyiapan dari HP ini.');
-      Navigator.of(context).pop();
+      AppSnackbar.show(context, '$pesan Hapus file penyiapan dari HP ini.',
+          duration: const Duration(seconds: 8));
+      // Akun di HP ini sudah berganti: sesi lama (misal admin bawaan) ditutup,
+      // lalu relawan langsung login dengan PIN-nya.
+      SessionService.instance.clear();
+      final nav = Navigator.of(context);
+      nav.pushNamedAndRemoveUntil(AppRoutes.roleSelection, (_) => false);
+      nav.pushNamed(AppRoutes.relawanLogin);
     } on PenyiapanException catch (e) {
       if (!mounted) return;
       setState(() => _sibuk = false);
@@ -107,10 +135,11 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
                 'Di HP ini, ketuk file yang diterima (notifikasi Quick Share, '
                     'WhatsApp, atau aplikasi File) lalu pilih Buka dengan LOGEVA. '
                     'Atau tekan PILIH FILE di bawah.',
-                'Periksa isinya, lalu tekan TERAPKAN.',
+                'Periksa isinya, lalu tekan SIAPKAN & SINKRONKAN.',
+                'Login dengan PIN dari admin; data posko langsung muncul.',
               ],
               note: 'Tidak perlu internet. Setelah diterapkan, HP ini menjadi '
-                  'HP Anggota: relawan login dengan PIN dari admin.',
+                  'HP Anggota posko tersebut.',
             ),
             const SizedBox(height: 16),
             SecondaryButton(
@@ -132,6 +161,10 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
                   'Relawan': '${file.relawan.length} akun',
                   'Admin': '${file.admin.length} akun',
                   'Master barang': '${file.barang.length} barang',
+                  if (_isiData != null)
+                    'Data posko': '${_isiData!.pengungsi} pengungsi, '
+                        '${_isiData!.masuk} barang masuk, '
+                        '${_isiData!.keluar} barang keluar',
                 },
               ),
               const SizedBox(height: 14),
@@ -151,7 +184,7 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
                 )
               else
                 PrimaryButton(
-                  text: 'TERAPKAN',
+                  text: _isiData != null ? 'SIAPKAN & SINKRONKAN' : 'TERAPKAN',
                   isLoading: _sibuk,
                   onPressed: _terapkan,
                 ),

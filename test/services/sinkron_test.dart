@@ -226,4 +226,37 @@ void main() {
     expect(BerkasMasukService.kenali(nSiap, fSiap), JenisBerkas.penyiapan);
     expect(BerkasMasukService.kenali('foto.zip', [1, 2, 3]), JenisBerkas.tidakDikenal);
   });
+
+  test('HP relawan baru: satu file dari HP Induk = akun + data langsung muncul',
+      () async {
+    await catat(induk, 'Ani', masuk: 30);
+    final baru = buka('anggota_baru');
+    addTearDown(baru.close);
+
+    final (nama, file) = await SinkronService.buatFile(await poskoDi(induk),
+        store: induk, dibuatOleh: 'Admin', awalanNama: 'LOGEVA_penyiapan_');
+    expect(nama, startsWith('LOGEVA_penyiapan_BalaiDesa_dari-induk_'));
+    expect(BerkasMasukService.kenali(nama, file), JenisBerkas.sinkron);
+    // HP baru (dan HP Anggota posko yang sama) boleh disiapkan dari file ini.
+    expect(await SinkronService.bisaMenyiapkan(file, store: baru), isTrue);
+    expect(await SinkronService.bisaMenyiapkan(file, store: a), isTrue);
+    // File dari HP Anggota tidak bisa menyiapkan HP lain.
+    expect(await SinkronService.bisaMenyiapkan(await kirimDari(a), store: baru), isFalse);
+
+    final isi = SinkronService.ringkasanIsi(file)!;
+    expect((isi.pengungsi, isi.masuk), (1, 1));
+
+    // Yang dilakukan tombol SIAPKAN & SINKRONKAN.
+    await PenyiapanService.terapkan(PenyiapanService.baca(file), store: baru);
+    await GabungPaketService.terapkan(file, store: baru);
+
+    expect(await namaPengungsi(baru), {'Ani'});
+    expect(await stokBeras(baru), 30);
+    expect((await RelawanRepository.withStore(baru).getAll()).single.nama, 'Andi');
+
+    // Relawan di HP baru lalu bisa mengirim balik ke HP Induk.
+    await catat(baru, 'Rina');
+    await SinkronService.terapkan(await kirimDari(baru), store: induk);
+    expect(await namaPengungsi(induk), {'Ani', 'Rina'});
+  });
 }

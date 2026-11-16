@@ -113,8 +113,11 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
     );
     if (!paham || !mounted) return;
 
+    final keFlashdisk = await _pilihTujuanUsb();
+    if (keFlashdisk == null || !mounted) return;
+
     setState(() => _menyimpan = true);
-    final hasil = await PaketDataService.simpan(paket);
+    final hasil = await PaketDataService.simpan(paket, keFlashdisk: keFlashdisk);
     if (!mounted) return;
     setState(() => _menyimpan = false);
     if (hasil.status == TransferStatus.cancelled) return;
@@ -125,6 +128,39 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
       jenisData: 'Paket Data Posko',
     );
   }
+
+  /// Cara membawa paket ke pusat lewat USB. null = batal;
+  /// false = kabel USB ke laptop; true = flashdisk USB OTG.
+  Future<bool?> _pilihTujuanUsb() => showDialog<bool>(
+        context: context,
+        builder: (c) => SimpleDialog(
+          title: const Text('Simpan untuk dibawa ke pusat'),
+          children: [
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(c).pop(false),
+              child: const ListTile(
+                leading: Icon(Icons.usb_rounded),
+                title: Text('Kabel USB ke laptop'),
+                subtitle: Text('Disimpan di Download/LOGEVA, lalu disalin '
+                    'ke laptop lewat kabel USB.'),
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(c).pop(true),
+              child: const ListTile(
+                leading: Icon(Icons.sd_storage_rounded),
+                title: Text('Flashdisk (USB OTG)'),
+                subtitle: Text('Colok flashdisk ke HP, lalu pilih '
+                    'flashdisk sebagai lokasi simpan.'),
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(c).pop(),
+              child: const Text('BATAL'),
+            ),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +184,10 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
             Text(
               'Paket berisi SELURUH data posko (bukan hanya yang baru). '
               'Pusat menggabungkannya tanpa dobel, jadi paket boleh diekspor '
-              'kapan saja dan berkali-kali.',
+              'kapan saja dan berkali-kali.\n\n'
+              'Sebelum ekspor, gabungkan dulu File Sinkron dari semua HP '
+              'relawan (Data → Sinkron Antar-HP) supaya data mereka ikut '
+              'terkirim ke pusat.',
               style: AppTextStyles.small(p),
             ),
             const SizedBox(height: 16),
@@ -254,7 +293,7 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
                 const SizedBox(height: 8),
               ],
               PrimaryButton(
-                text: 'EKSPOR PAKET (ZIP)',
+                text: 'EKSPOR KE USB (ZIP)',
                 isLoading: _menyimpan,
                 onPressed: periksa == null || !periksa.bisaEkspor || !_adaKataSandi
                     ? null

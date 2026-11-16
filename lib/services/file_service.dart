@@ -125,14 +125,16 @@ class FileService {
   /// Simpan file apa pun (misal ZIP Paket Data Posko).
   /// Di Android 10+ file LANGSUNG masuk ke folder Download/LOGEVA (lihat
   /// [lokasiTerakhir]); selain itu pengguna memilih lokasi.
+  /// [pilihLokasi] = selalu buka pemilih lokasi (misal flashdisk USB OTG).
   /// Hasil false = pengguna membatalkan.
   static Future<bool> saveBytes(
     String fileName,
     Uint8List bytes, {
     String dialogTitle = 'Simpan file',
+    bool pilihLokasi = false,
   }) async {
     lokasiTerakhir = null;
-    if (_android) {
+    if (_android && !pilihLokasi) {
       try {
         lokasiTerakhir = await _kanal.invokeMethod<String>('simpan', {
           'nama': fileName,

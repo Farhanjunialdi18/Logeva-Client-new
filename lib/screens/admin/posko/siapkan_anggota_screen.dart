@@ -10,7 +10,9 @@ import 'package:flutter/material.dart';
 import '../../../models/posko.dart';
 import '../../../services/file_service.dart';
 import '../../../services/penyiapan_service.dart';
+import '../../../services/paket_data_service.dart';
 import '../../../services/session_service.dart';
+import '../../../services/sinkron_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/app_snackbar.dart';
@@ -32,6 +34,7 @@ class SiapkanAnggotaScreen extends StatefulWidget {
 
 class _SiapkanAnggotaScreenState extends State<SiapkanAnggotaScreen> {
   RencanaPenyiapan? _rencana;
+  PaketData? _data;
   bool _sibuk = false;
 
   @override
@@ -42,27 +45,34 @@ class _SiapkanAnggotaScreenState extends State<SiapkanAnggotaScreen> {
 
   Future<void> _load() async {
     final r = await PenyiapanService.rencana(widget.posko);
+    final data = await PaketDataService.kumpulkan([widget.posko]);
     if (!mounted) return;
-    setState(() => _rencana = r);
+    setState(() {
+      _rencana = r;
+      _data = data;
+    });
   }
 
   /// Kirim lewat menu Bagikan (Bluetooth / Quick Share / WhatsApp).
   Future<void> _kirim() async {
     final yakin = await ConfirmDialog.show(
       context,
-      title: 'Berisi akun posko',
+      title: 'Berisi akun & data posko',
       message: 'File ini berisi akun admin & relawan (PIN dan password sudah '
-          'diacak). Kirim hanya ke HP relawan posko ini, lalu HAPUS file setelah '
-          'dipakai di HP tujuan.',
+          'diacak) serta data pengungsi & logistik posko. Kirim hanya ke HP '
+          'relawan posko ini, lalu HAPUS file setelah dipakai di HP tujuan.',
       confirmText: 'SAYA MENGERTI',
     );
     if (!yakin || !mounted) return;
 
     setState(() => _sibuk = true);
     try {
-      final (nama, bytes) = await PenyiapanService.buat(
+      // Satu file: akun + master barang + SELURUH data posko, supaya HP
+      // relawan langsung siap dan datanya langsung muncul.
+      final (nama, bytes) = await SinkronService.buatFile(
         widget.posko,
         dibuatOleh: SessionService.instance.namaPencatat,
+        awalanNama: 'LOGEVA_penyiapan_',
       );
       final terkirim =
           await FileService.bagikan(nama, bytes, judul: 'Kirim File Penyiapan');
@@ -125,10 +135,16 @@ class _SiapkanAnggotaScreenState extends State<SiapkanAnggotaScreen> {
                   'Admin': r.admin.isEmpty
                       ? '-'
                       : r.admin.map((a) => a.nama).join(', '),
+                  'Data posko': _data == null
+                      ? '-'
+                      : '${_data!.jumlahPengungsiAktif} pengungsi, '
+                          '${_data!.masuk.length} barang masuk, '
+                          '${_data!.keluar.length} barang keluar',
                   'Lainnya': 'Master barang & kategori',
                 },
                 note: 'PIN & password tidak ikut dalam bentuk asli. Relawan '
-                    'login di HP Anggota dengan PIN yang Anda berikan.',
+                    'login di HP Anggota dengan PIN yang Anda berikan. Data '
+                    'posko langsung muncul di HP relawan.',
               ),
               const SizedBox(height: 14),
               if (r.adminBawaan.isNotEmpty) ...[
@@ -152,12 +168,14 @@ class _SiapkanAnggotaScreenState extends State<SiapkanAnggotaScreen> {
                 langkah: [
                   'Tekan BAGIKAN, pilih Quick Share, Bluetooth, atau WhatsApp, '
                       'lalu pilih HP relawan.',
-                  'Di HP relawan: ketuk file yang diterima (di notifikasi, '
-                      'WhatsApp, atau aplikasi File) → Buka dengan LOGEVA.',
-                  'Relawan login dengan PIN-nya. Hapus file di kedua HP.',
+                  'Di HP relawan: ketuk file ZIP yang diterima (di notifikasi, '
+                      'WhatsApp, atau aplikasi File) → Buka dengan LOGEVA → '
+                      'SIAPKAN & SINKRONKAN.',
+                  'Relawan login dengan PIN-nya; data posko sudah ada. Hapus '
+                      'file di kedua HP.',
                 ],
                 note: 'Ada relawan baru atau PIN diganti? Kirim ulang file ini; '
-                    'HP Anggota memperbarui akunnya tanpa data dobel.',
+                    'HP Anggota memperbarui akun & datanya tanpa dobel.',
               ),
               const SizedBox(height: 20),
               PrimaryButton(

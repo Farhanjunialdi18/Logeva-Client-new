@@ -23,6 +23,7 @@ import '../data/repositories/pengaturan_repository.dart';
 import '../data/table_store.dart';
 import '../models/posko.dart';
 import '../utils/waktu_wib.dart';
+import 'csv_service.dart';
 import 'gabung_paket_service.dart';
 import 'paket_data_service.dart';
 import 'penyiapan_service.dart';
@@ -78,6 +79,7 @@ class SinkronService {
     DateTime? waktu,
     bool pengungsi = true,
     bool logistik = true,
+    String awalanNama = 'LOGEVA_sinkron_',
   }) async {
     final s = _s(store);
     final now = waktu ?? DateTime.now();
@@ -116,7 +118,7 @@ class SinkronService {
 
     final nama = posko.nama.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '');
     return (
-      'LOGEVA_sinkron_${nama.isEmpty ? 'Posko' : nama}_'
+      '$awalanNama${nama.isEmpty ? 'Posko' : nama}_'
           '${anggota ? 'dari-anggota' : 'dari-induk'}_${WaktuWib.capFile(now)}.zip',
       ZipEncoder().encodeBytes(arsip),
     );
@@ -128,6 +130,43 @@ class SinkronService {
     try {
       return ZipDecoder().decodeBytes(bytes).findFile(FilePenyiapan.namaJson) != null;
     } catch (_) {
+      return false;
+    }
+  }
+
+  /// Jumlah data posko di dalam file dari HP Induk (untuk pratinjau di HP
+  /// yang belum disiapkan). null = file tidak membawa data posko.
+  static ({int pengungsi, int masuk, int keluar})? ringkasanIsi(List<int> bytes) {
+    try {
+      final arsip = ZipDecoder().decodeBytes(bytes);
+      if (arsip.findFile('info.csv') == null) return null;
+      List<Map<String, String>> baca(String nama) {
+        final f = arsip.findFile(nama);
+        return f == null
+            ? const []
+            : CsvService.decode(utf8.decode(f.content, allowMalformed: true));
+      }
+
+      return (
+        pengungsi: baca('pengungsi.csv')
+            .where((r) => (r['dihapus_pada'] ?? '').isEmpty)
+            .length,
+        masuk: baca('barang_masuk.csv').length,
+        keluar: baca('barang_keluar.csv').length,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// File dari HP Induk (berisi akun) yang bisa dipakai untuk MENYIAPKAN
+  /// HP ini: HP baru, atau HP Anggota dari HP Induk & posko yang sama.
+  static Future<bool> bisaMenyiapkan(List<int> bytes, {TableStore? store}) async {
+    if (!_adaAkun(bytes)) return false;
+    try {
+      final file = PenyiapanService.baca(bytes);
+      return await PenyiapanService.cekBoleh(file, store: _s(store)) == null;
+    } on PenyiapanException {
       return false;
     }
   }

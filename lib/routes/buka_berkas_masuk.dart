@@ -19,6 +19,7 @@ import '../screens/sinkron/sinkron_screen.dart';
 import '../services/berkas_masuk_service.dart';
 import '../services/kunci_otomatis.dart';
 import '../services/session_service.dart';
+import '../services/sinkron_service.dart';
 import '../utils/app_snackbar.dart';
 import 'app_routes.dart';
 
@@ -86,7 +87,11 @@ class BukaBerkasMasuk {
       case JenisBerkas.penyiapan:
         nav.pushNamed(AppRoutes.terimaPenyiapan);
       case JenisBerkas.sinkron:
-        if (adminSiap || relawan) {
+        if (!adminSiap && !relawan && await _siapkanDariFile()) {
+          // File dari HP Induk di HP relawan yang belum login / masih baru:
+          // siapkan akun + gabung data sekaligus, lalu login PIN.
+          nav.pushNamed(AppRoutes.terimaPenyiapan);
+        } else if (adminSiap || relawan) {
           buka(const SinkronScreen());
         } else if (belumLogin) {
           _pesan('File sinkron diterima. Login dulu, file langsung dibuka setelah login.');
@@ -122,6 +127,17 @@ class BukaBerkasMasuk {
         _pesan('File ini bukan file LOGEVA (Penyiapan, Sinkron, Cadangan, atau '
             'Paket dari website).', error: true);
     }
+  }
+
+  /// File sinkron dari HP Induk yang bisa menyiapkan HP ini (HP baru atau
+  /// HP Anggota posko yang sama)? Kalau ya, file dialihkan ke Penyiapan.
+  static Future<bool> _siapkanDariFile() async {
+    final berkas = BerkasMasukService.ambil(JenisBerkas.sinkron);
+    if (berkas == null) return false;
+    final bisa = await SinkronService.bisaMenyiapkan(berkas.bytes);
+    BerkasMasukService.simpan(berkas.name, berkas.bytes,
+        bisa ? JenisBerkas.penyiapan : JenisBerkas.sinkron);
+    return bisa;
   }
 
   /// File terkunci yang namanya diubah: tanyakan jenisnya.

@@ -15,6 +15,12 @@ analyzer:
     - android/**
     - web/**
     - windows/**
+  errors:
+    # Flutter 3.47+ menandai package:flutter/material.dart sebagai usang
+    # (diganti package:material_ui, yang mewajibkan Flutter >= 3.47).
+    # Disembunyikan dulu supaya tim dengan Flutter lebih lama tetap bisa
+    # build; hapus baris ini saat proyek migrasi ke material_ui.
+    deprecated_member_use: ignore
 
 linter:
   # The lint rules applied to this project can be customized in the

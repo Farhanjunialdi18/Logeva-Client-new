@@ -419,14 +419,18 @@ class PaketDataService {
     return BerkasTerkunci.kunci(paket.zip, kataSandi);
   }
 
-  /// Simpan paket ke file ZIP (pengguna memilih lokasi, misal flashdisk).
-  static Future<TransferResult> simpan(PaketData paket) async {
+  /// Simpan paket ke file ZIP untuk dibawa ke pusat lewat USB.
+  /// [keFlashdisk] false = langsung ke Download/LOGEVA (lalu disalin ke
+  /// laptop lewat kabel USB); true = pilih lokasi (flashdisk USB OTG).
+  static Future<TransferResult> simpan(PaketData paket,
+      {bool keFlashdisk = false}) async {
     try {
       final berkas = await berkasTerkunci(paket);
       final saved = await FileService.saveBytes(
         paket.namaFile,
         berkas,
         dialogTitle: 'Simpan Paket Data Posko',
+        pilihLokasi: keFlashdisk,
       );
       if (!saved) {
         return const TransferResult(
@@ -448,9 +452,12 @@ class PaketDataService {
         TransferStatus.success,
         'Paket ${paket.namaFile} tersimpan dan dikunci kata sandi posko.'
         '${FileService.lokasiTerakhir == null ? '' : '\nLokasi: ${FileService.lokasiTerakhir}'}\n\n'
-        'Bawa file ini ke pusat lalu impor di menu Import Paket Posko (pusat '
-        'mengetik kata sandi posko saat impor pertama). Hapus file dari '
-        'flashdisk setelah diimpor karena berisi data pribadi.',
+        '${FileService.lokasiTerakhir == null ? '' : 'Sambungkan HP ke laptop '
+            'dengan kabel USB (pilih "Transfer file"), buka folder '
+            'Download/LOGEVA, lalu salin file ini ke laptop / flashdisk.\n\n'}'
+        'Di pusat, impor file ini di website LOGEVA menu Import Paket Posko '
+        '(pusat mengetik kata sandi posko saat impor pertama). Hapus file dari '
+        'HP & flashdisk setelah diimpor karena berisi data pribadi.',
       );
     } on StateError catch (e) {
       return TransferResult(TransferStatus.failed, e.message);
