@@ -49,7 +49,7 @@ void main() {
   test('cadangan dipulihkan di HP baru: data, akun, dan kode perangkat sama', () async {
     final kodeAsal = await PengaturanRepository.withStore(asal).kodePerangkat();
     final (nama, bytes) = await CadanganService.buat(store: asal);
-    expect(nama, startsWith('cadangan_logeva_'));
+    expect(nama, startsWith('LOGEVA_cadangan_'));
 
     expect(() => CadanganService.baca(bytes),
         throwsA(isA<CadanganException>().having((e) => e.perluKataSandi, 'perlu kata sandi', isTrue)));

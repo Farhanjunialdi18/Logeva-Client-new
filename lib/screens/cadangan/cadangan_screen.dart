@@ -10,6 +10,7 @@
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
+import '../../services/berkas_masuk_service.dart';
 import '../../services/cadangan_service.dart';
 import '../../services/file_service.dart';
 import '../../services/session_service.dart';
@@ -43,6 +44,16 @@ class _CadanganScreenState extends State<CadanganScreen> {
   String? _namaFile;
   String? _ditolak;
 
+  @override
+  void initState() {
+    super.initState();
+    // File dari "Buka dengan LOGEVA" langsung diperiksa.
+    final masuk = BerkasMasukService.ambil(JenisBerkas.cadangan);
+    if (masuk != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pilih(masuk));
+    }
+  }
+
   Future<void> _cadangkan({required bool bagikan}) async {
     final lanjut = await ConfirmDialog.show(
       context,
@@ -59,7 +70,13 @@ class _CadanganScreenState extends State<CadanganScreen> {
       final ok = bagikan
           ? await FileService.bagikan(nama, bytes, judul: 'Kirim cadangan')
           : await FileService.saveBytes(nama, bytes, dialogTitle: 'Simpan cadangan');
-      if (mounted && ok) AppSnackbar.show(context, 'Cadangan $nama dibuat.');
+      if (mounted && ok) {
+        AppSnackbar.show(
+          context,
+          bagikan ? 'Cadangan $nama dibuat.' : FileService.pesanTersimpan(nama),
+          duration: const Duration(seconds: 8),
+        );
+      }
     } catch (e) {
       if (mounted) AppSnackbar.show(context, 'Cadangan gagal dibuat: $e', isError: true);
     } finally {
@@ -67,10 +84,10 @@ class _CadanganScreenState extends State<CadanganScreen> {
     }
   }
 
-  Future<void> _pilih() async {
+  Future<void> _pilih([BerkasMasuk? masuk]) async {
     setState(() => _sibuk = true);
     try {
-      final f = await FileService.pickZip();
+      final f = masuk ?? await FileService.pickZip();
       if (f == null) return;
       final file = await _bacaDenganKataSandi(f.bytes);
       if (file == null) return;
@@ -188,7 +205,7 @@ class _CadanganScreenState extends State<CadanganScreen> {
               title: 'UNTUK HP PENGGANTI',
               langkah: [
                 'Pasang aplikasi LOGEVA di HP pengganti.',
-                'Pilih file cadangan_logeva_....zip terbaru, periksa isinya.',
+                'Pilih file LOGEVA_cadangan_....zip terbaru, periksa isinya.',
                 'Tekan PULIHKAN, lalu login dengan akun yang sama seperti di HP lama.',
               ],
               note: 'HP pengganti menjadi sama persis dengan HP lama (termasuk peran '

@@ -20,7 +20,6 @@ import '../../../widgets/info_card.dart';
 import '../../../widgets/langkah_card.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
-import '../../../widgets/secondary_button.dart';
 
 class SiapkanAnggotaScreen extends StatefulWidget {
   final Posko posko;
@@ -47,8 +46,8 @@ class _SiapkanAnggotaScreenState extends State<SiapkanAnggotaScreen> {
     setState(() => _rencana = r);
   }
 
-  /// [bagikan] true = menu Bagikan (Bluetooth/Quick Share), false = simpan file.
-  Future<void> _kirim({required bool bagikan}) async {
+  /// Kirim lewat menu Bagikan (Bluetooth / Quick Share / WhatsApp).
+  Future<void> _kirim() async {
     final yakin = await ConfirmDialog.show(
       context,
       title: 'Berisi akun posko',
@@ -65,18 +64,15 @@ class _SiapkanAnggotaScreenState extends State<SiapkanAnggotaScreen> {
         widget.posko,
         dibuatOleh: SessionService.instance.namaPencatat,
       );
-      final terkirim = bagikan
-          ? await FileService.bagikan(nama, bytes, judul: 'Kirim File Penyiapan')
-          : await FileService.saveBytes(nama, bytes,
-              dialogTitle: 'Simpan File Penyiapan');
+      final terkirim =
+          await FileService.bagikan(nama, bytes, judul: 'Kirim File Penyiapan');
       if (!mounted) return;
       if (terkirim) {
         AppSnackbar.show(
           context,
-          bagikan
-              ? 'File $nama siap dikirim. Di HP tujuan: buka aplikasi → '
-                  '"Siapkan HP ini dari HP Induk".'
-              : 'File $nama tersimpan.',
+          'File $nama terkirim. Di HP tujuan: ketuk file yang diterima → '
+          'Buka dengan LOGEVA.',
+          duration: const Duration(seconds: 8),
         );
       }
     } on PenyiapanException catch (e) {
@@ -154,29 +150,20 @@ class _SiapkanAnggotaScreenState extends State<SiapkanAnggotaScreen> {
               const LangkahCard(
                 title: 'CARA PAKAI',
                 langkah: [
-                  'Tekan BAGIKAN, pilih Bluetooth atau Quick Share, lalu '
-                      'pilih HP relawan.',
-                  'Di HP relawan: buka aplikasi → "Siapkan HP ini dari HP '
-                      'Induk" → pilih file yang diterima.',
+                  'Tekan BAGIKAN, pilih Quick Share, Bluetooth, atau WhatsApp, '
+                      'lalu pilih HP relawan.',
+                  'Di HP relawan: ketuk file yang diterima (di notifikasi, '
+                      'WhatsApp, atau aplikasi File) → Buka dengan LOGEVA.',
                   'Relawan login dengan PIN-nya. Hapus file di kedua HP.',
                 ],
                 note: 'Ada relawan baru atau PIN diganti? Kirim ulang file ini; '
-                    'HP Anggota akan memperbarui akunnya tanpa data dobel.',
+                    'HP Anggota memperbarui akunnya tanpa data dobel.',
               ),
               const SizedBox(height: 20),
               PrimaryButton(
-                text: 'BAGIKAN (BLUETOOTH / QUICK SHARE)',
+                text: 'BAGIKAN (QUICK SHARE / BLUETOOTH)',
                 isLoading: _sibuk,
-                onPressed: r.bisaDibuat ? () => _kirim(bagikan: true) : null,
-              ),
-              const SizedBox(height: 12),
-              SecondaryButton(
-                text: 'SIMPAN KE FILE',
-                icon: Icons.save_alt_rounded,
-                height: 50,
-                onPressed: r.bisaDibuat && !_sibuk
-                    ? () => _kirim(bagikan: false)
-                    : null,
+                onPressed: r.bisaDibuat ? _kirim : null,
               ),
             ],
             const SizedBox(height: 24),

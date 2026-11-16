@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../services/berkas_masuk_service.dart';
 import '../../services/file_service.dart';
 import '../../services/penyiapan_service.dart';
 import '../../services/perangkat_service.dart';
@@ -33,10 +34,20 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
   String? _ditolak; // alasan file tidak bisa dipakai di HP ini
   bool _sibuk = false;
 
-  Future<void> _pilih() async {
+  @override
+  void initState() {
+    super.initState();
+    final masuk = BerkasMasukService.ambil(JenisBerkas.penyiapan);
+    if (masuk != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pilih(masuk));
+    }
+  }
+
+  /// [masuk] = file dari "Buka dengan LOGEVA"; kosong = pilih file.
+  Future<void> _pilih([BerkasMasuk? masuk]) async {
     setState(() => _sibuk = true);
     try {
-      final f = await FileService.pickZip();
+      final f = masuk ?? await FileService.pickZip();
       if (f == null) return;
       final file = PenyiapanService.baca(f.bytes);
       final alasan = await PenyiapanService.cekBoleh(file);
@@ -93,7 +104,9 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
               langkah: [
                 'Di HP Induk (admin): Data Posko → pilih posko → SIAPKAN HP '
                     'ANGGOTA → Bagikan lewat Bluetooth / Quick Share.',
-                'Terima file di HP ini, lalu tekan PILIH FILE di bawah.',
+                'Di HP ini, ketuk file yang diterima (notifikasi Quick Share, '
+                    'WhatsApp, atau aplikasi File) lalu pilih Buka dengan LOGEVA. '
+                    'Atau tekan PILIH FILE di bawah.',
                 'Periksa isinya, lalu tekan TERAPKAN.',
               ],
               note: 'Tidak perlu internet. Setelah diterapkan, HP ini menjadi '

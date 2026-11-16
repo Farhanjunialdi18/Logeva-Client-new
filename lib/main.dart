@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'routes/app_routes.dart';
+import 'routes/buka_berkas_masuk.dart';
 import 'services/kunci_otomatis.dart';
 import 'services/perangkat_service.dart';
 import 'services/peringatan_service.dart';
@@ -24,6 +25,8 @@ Future<void> main() async {
   // Notifikasi lokal posko hampir/sudah penuh & stok < 7 hari (tanpa
   // internet). Setelah runApp supaya jendela izin bisa tampil.
   PeringatanService.mulai();
+  // File ZIP yang dibuka lewat "Buka dengan LOGEVA" (Quick Share, WhatsApp, File).
+  BukaBerkasMasuk.mulai();
 }
 
 class LogevaApp extends StatelessWidget {

@@ -126,7 +126,7 @@ class PenyiapanService {
       ..addFile(ArchiveFile.string(FilePenyiapan.namaJson, jsonEncode(json)));
     final nama = posko.nama.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '');
     return (
-      'penyiapan_${nama.isEmpty ? 'Posko' : nama}_${WaktuWib.capFile(now)}.zip',
+      'LOGEVA_penyiapan_${nama.isEmpty ? 'Posko' : nama}_${WaktuWib.capFile(now)}.zip',
       ZipEncoder().encodeBytes(arsip),
     );
   }

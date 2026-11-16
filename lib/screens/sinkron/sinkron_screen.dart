@@ -17,6 +17,7 @@ import '../../data/repositories/riwayat_repository.dart';
 import '../../models/posko.dart';
 import '../../models/riwayat_transaksi.dart';
 import '../../services/dobel_service.dart';
+import '../../services/berkas_masuk_service.dart';
 import '../../services/file_service.dart';
 import '../../services/gabung_paket_service.dart';
 import '../../services/perangkat_service.dart';
@@ -54,6 +55,11 @@ class _SinkronScreenState extends State<SinkronScreen> {
   List<RiwayatSinkron> _riwayat = [];
   bool _loading = true;
   bool _mengirim = false;
+
+  // Data yang dikirim: semua (bawaan) atau dipilih sebagian.
+  bool _semuaData = true;
+  bool _kirimPengungsi = true;
+  bool _kirimLogistik = true;
   bool _menerima = false;
 
   // File yang sedang diperiksa
@@ -73,6 +79,10 @@ class _SinkronScreenState extends State<SinkronScreen> {
   void initState() {
     super.initState();
     _load();
+    final masuk = BerkasMasukService.ambil(JenisBerkas.sinkron);
+    if (masuk != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pilih(masuk));
+    }
   }
 
   Future<void> _load() async {
@@ -99,7 +109,10 @@ class _SinkronScreenState extends State<SinkronScreen> {
 
   // ---------------- KIRIM ----------------
 
-  Future<void> _kirim({required bool bagikan}) async {
+  bool get _pengungsiDikirim => _semuaData || _kirimPengungsi;
+  bool get _logistikDikirim => _semuaData || _kirimLogistik;
+
+  Future<void> _kirim() async {
     final posko = _posko;
     if (posko == null) return;
     final yakin = await ConfirmDialog.show(
@@ -117,25 +130,31 @@ class _SinkronScreenState extends State<SinkronScreen> {
       final (nama, bytes) = await SinkronService.buatFile(
         posko,
         dibuatOleh: SessionService.instance.namaPencatat,
+        pengungsi: _pengungsiDikirim,
+        logistik: _logistikDikirim,
       );
-      final ok = bagikan
-          ? await FileService.bagikan(nama, bytes, judul: 'Kirim File Sinkron')
-          : await FileService.saveBytes(nama, bytes,
-              dialogTitle: 'Simpan File Sinkron');
+      final ok =
+          await FileService.bagikan(nama, bytes, judul: 'Kirim File Sinkron');
       if (ok) {
         await RiwayatRepository.instance.log(
           jenis: RiwayatTransaksi.jenisExport,
           jenisData: _label,
           berhasil: true,
-          keterangan: nama,
+          keterangan: _semuaData
+              ? nama
+              : '$nama (${[
+                  if (_pengungsiDikirim) 'pengungsi',
+                  if (_logistikDikirim) 'logistik',
+                ].join(' & ')} saja)',
         );
       }
       if (!mounted || !ok) return;
       AppSnackbar.show(
         context,
-        _anggota
-            ? 'File $nama siap. Terima & gabungkan di HP Induk.'
-            : 'File $nama siap. Terima & gabungkan di HP Anggota.',
+        'File $nama terkirim. Di '
+        '${_anggota ? 'HP Induk' : 'HP Anggota'}: ketuk file yang diterima → '
+        'Buka dengan LOGEVA → GABUNGKAN.',
+        duration: const Duration(seconds: 8),
       );
     } catch (e) {
       if (mounted) AppSnackbar.show(context, 'Gagal: $e', isError: true);
@@ -144,12 +163,64 @@ class _SinkronScreenState extends State<SinkronScreen> {
     }
   }
 
+  /// Pilihan data yang dikirim: SEMUA DATA atau PILIH DATA (pengungsi /
+  /// logistik). Data yang tidak dipilih tidak diubah di HP tujuan.
+  Widget _pilihanData(AppPalette p) {
+    Widget chip(String teks, bool aktif, VoidCallback onTap) => ChoiceChip(
+          label: Text(teks),
+          selected: aktif,
+          onSelected: _mengirim ? null : (_) => onTap(),
+        );
+    Widget centang(String teks, bool nilai, ValueChanged<bool> ubah) =>
+        CheckboxListTile(
+          value: nilai,
+          onChanged: _mengirim ? null : (v) => ubah(v ?? false),
+          title: Text(teks, style: AppTextStyles.small(p).copyWith(color: p.textPrimary)),
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('DATA YANG DIKIRIM', style: AppTextStyles.label(p)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            chip('Semua data', _semuaData, () => setState(() => _semuaData = true)),
+            chip('Pilih data', !_semuaData, () => setState(() => _semuaData = false)),
+          ],
+        ),
+        if (!_semuaData) ...[
+          centang('Data pengungsi', _kirimPengungsi,
+              (v) => setState(() => _kirimPengungsi = v)),
+          centang('Logistik (barang masuk & keluar)', _kirimLogistik,
+              (v) => setState(() => _kirimLogistik = v)),
+          if (!_kirimPengungsi && !_kirimLogistik)
+            Text('Pilih minimal satu data.',
+                style: AppTextStyles.small(p).copyWith(color: AppColors.error)),
+        ],
+        const SizedBox(height: 4),
+        Text(
+          _anggota
+              ? 'Data posko selalu ikut. Data yang tidak dipilih tidak berubah di HP Induk.'
+              : 'Data posko, akun & master barang selalu ikut. Data yang tidak '
+                  'dipilih tidak berubah di HP Anggota.',
+          style: AppTextStyles.small(p),
+        ),
+      ],
+    );
+  }
+
   // ---------------- TERIMA ----------------
 
-  Future<void> _pilih() async {
+  /// [masuk] = file dari "Buka dengan LOGEVA"; kosong = pilih file.
+  Future<void> _pilih([BerkasMasuk? masuk]) async {
     setState(() => _menerima = true);
     try {
-      final f = await FileService.pickZip();
+      final f = masuk ?? await FileService.pickZip();
       if (f == null) return;
       final cek = await SinkronService.periksa(f.bytes);
       if (!mounted) return;
@@ -318,7 +389,9 @@ class _SinkronScreenState extends State<SinkronScreen> {
                       'Setelah semua masuk, KIRIM file gabungan ke HP Anggota '
                           '(ikut membawa perubahan akun & master barang).',
                     ],
-              note: 'Pastikan tanggal & jam di semua HP benar.',
+              note: 'Menerima file: ketuk file yang diterima (notifikasi Quick '
+                  'Share, WhatsApp, atau aplikasi File) lalu pilih Buka dengan '
+                  'LOGEVA. Pastikan tanggal & jam di semua HP benar.',
             ),
             const SizedBox(height: 20),
 
@@ -349,17 +422,12 @@ class _SinkronScreenState extends State<SinkronScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
+              _pilihanData(p),
+              const SizedBox(height: 14),
               PrimaryButton(
                 text: _anggota ? 'KIRIM KE HP INDUK' : 'KIRIM KE HP ANGGOTA',
                 isLoading: _mengirim,
-                onPressed: () => _kirim(bagikan: true),
-              ),
-              const SizedBox(height: 10),
-              SecondaryButton(
-                text: 'SIMPAN KE FILE',
-                icon: Icons.save_alt_rounded,
-                height: 50,
-                onPressed: _mengirim ? null : () => _kirim(bagikan: false),
+                onPressed: _pengungsiDikirim || _logistikDikirim ? _kirim : null,
               ),
             ],
             const SizedBox(height: 24),

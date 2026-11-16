@@ -10,12 +10,14 @@ import '../theme/app_colors.dart';
 class AppSnackbar {
   AppSnackbar._();
 
-  static void show(BuildContext context, String message, {bool isError = false}) {
+  static void show(BuildContext context, String message,
+      {bool isError = false, Duration duration = const Duration(seconds: 4)}) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
+        duration: duration,
         backgroundColor: isError ? AppColors.primaryPressed : const Color(0xFF1F7A4D),
         content: Row(
           children: [

@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../routes/buka_berkas_masuk.dart';
 import '../../widgets/admin_bottom_nav.dart';
 import '../relawan/logout/logout_dialog.dart';
 import 'beranda/admin_beranda_screen.dart';
@@ -33,6 +34,13 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   static const int tabSettings = 4;
 
   int _index = tabBeranda;
+
+  @override
+  void initState() {
+    super.initState();
+    // File yang dibuka lewat "Buka dengan LOGEVA" sebelum login.
+    WidgetsBinding.instance.addPostFrameCallback((_) => BukaBerkasMasuk.lanjutkan());
+  }
 
   /// Satu Navigator untuk setiap tab.
   final List<GlobalKey<NavigatorState>> _navKeys =

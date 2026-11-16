@@ -112,7 +112,7 @@ class CadanganService {
     final arsip = Archive()
       ..addFile(ArchiveFile.string(namaJson, jsonEncode(json)));
     final bytes = BerkasTerkunci.kunci(ZipEncoder().encode(arsip), kataSandi);
-    return ('cadangan_logeva_${WaktuWib.capFile(waktu)}.zip', bytes);
+    return ('LOGEVA_cadangan_${WaktuWib.capFile(waktu)}.zip', bytes);
   }
 
   /// Baca file cadangan. [kataSandi] = kata sandi posko (file terkunci);
@@ -131,7 +131,7 @@ class CadanganService {
       json = (jsonDecode(utf8.decode(f.content)) as Map).cast();
     } catch (_) {
       throw const CadanganException(
-          'File ini bukan file cadangan LOGEVA. Pilih file cadangan_logeva_....zip.');
+          'File ini bukan file cadangan LOGEVA. Pilih file LOGEVA_cadangan_....zip.');
     }
     if (json['jenis'] != jenis || json['versi_format'] != versiFormat) {
       throw const CadanganException('File ini bukan file cadangan LOGEVA.');

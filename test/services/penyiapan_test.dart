@@ -68,7 +68,7 @@ void main() {
 
   Future<FilePenyiapan> buatFile() async {
     final (nama, bytes) = await PenyiapanService.buat(posko, store: induk);
-    expect(nama, startsWith('penyiapan_BalaiDesa_'));
+    expect(nama, startsWith('LOGEVA_penyiapan_BalaiDesa_'));
     return PenyiapanService.baca(bytes);
   }
 

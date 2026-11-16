@@ -159,7 +159,7 @@ class PaketData {
   String get namaFile {
     final nama = posko.length == 1 ? posko.single.nama : 'SemuaPosko';
     final bersih = nama.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '');
-    return 'paket_${bersih.isEmpty ? 'Posko' : bersih}_'
+    return 'LOGEVA_paket_${bersih.isEmpty ? 'Posko' : bersih}_'
         '${WaktuWib.capFile(dibuatPada)}.zip';
   }
 
@@ -446,7 +446,8 @@ class PaketDataService {
       );
       return TransferResult(
         TransferStatus.success,
-        'Paket ${paket.namaFile} tersimpan dan dikunci kata sandi posko.\n\n'
+        'Paket ${paket.namaFile} tersimpan dan dikunci kata sandi posko.'
+        '${FileService.lokasiTerakhir == null ? '' : '\nLokasi: ${FileService.lokasiTerakhir}'}\n\n'
         'Bawa file ini ke pusat lalu impor di menu Import Paket Posko (pusat '
         'mengetik kata sandi posko saat impor pertama). Hapus file dari '
         'flashdisk setelah diimpor karena berisi data pribadi.',

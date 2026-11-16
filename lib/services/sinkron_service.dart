@@ -68,20 +68,39 @@ class SinkronService {
   // ---------------- KIRIM ----------------
 
   /// Buat File Sinkron untuk [posko] dari HP ini.
+  /// [pengungsi] / [logistik] false = data itu tidak ikut dikirim (pilih
+  /// sebagian). Data yang tidak dikirim tidak berubah di HP tujuan; akun &
+  /// master barang dari HP Induk selalu ikut.
   static Future<(String, Uint8List)> buatFile(
     Posko posko, {
     TableStore? store,
     String dibuatOleh = '',
     DateTime? waktu,
+    bool pengungsi = true,
+    bool logistik = true,
   }) async {
     final s = _s(store);
     final now = waktu ?? DateTime.now();
     final anggota = await PengaturanRepository.withStore(s).isAnggota();
-    final paket = await PaketDataService.kumpulkan(
+    final semua = await PaketDataService.kumpulkan(
       [posko],
       store: s,
       dieksporOleh: dibuatOleh,
       waktu: now,
+    );
+    final paket = PaketData(
+      dibuatPada: semua.dibuatPada,
+      kodePerangkat: semua.kodePerangkat,
+      dieksporOleh: semua.dieksporOleh,
+      peranPerangkat: semua.peranPerangkat,
+      posko: semua.posko,
+      relawan: semua.relawan,
+      pengungsi: pengungsi ? semua.pengungsi : const [],
+      masuk: logistik ? semua.masuk : const [],
+      keluar: logistik ? semua.keluar : const [],
+      barang: semua.barang,
+      stok: logistik ? semua.stok : const {},
+      petugas: semua.petugas,
     );
 
     final arsip = Archive();
@@ -97,7 +116,7 @@ class SinkronService {
 
     final nama = posko.nama.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '');
     return (
-      'sinkron_${nama.isEmpty ? 'Posko' : nama}_'
+      'LOGEVA_sinkron_${nama.isEmpty ? 'Posko' : nama}_'
           '${anggota ? 'dari-anggota' : 'dari-induk'}_${WaktuWib.capFile(now)}.zip',
       ZipEncoder().encodeBytes(arsip),
     );

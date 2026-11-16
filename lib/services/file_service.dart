@@ -7,11 +7,11 @@
 // ============================================================
 
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PickedCsv {
   final String name;
@@ -31,46 +31,72 @@ class FileServiceException implements Exception {
 class FileService {
   FileService._();
 
-  /// Buka pemilih file. Hasil null = pengguna membatalkan.
-  static Future<PickedCsv?> pickCsv() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any, // 'any' lebih aman di Android untuk file .csv
-      withData: true,
-    );
-    if (result == null || result.files.isEmpty) return null;
+  /// Folder tetap tempat semua file LOGEVA disimpan di HP Android.
+  static const String folderUnduhan = 'Download/LOGEVA';
 
-    final file = result.files.single;
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      throw const FileServiceException('File harus berformat .csv');
+  /// Lokasi file yang terakhir disimpan (misal "Download/LOGEVA/x.zip"),
+  /// null kalau lokasinya dipilih sendiri lewat pemilih lokasi.
+  static String? lokasiTerakhir;
+
+  static const MethodChannel _kanal = MethodChannel('id.gmls.logeva/unduhan');
+
+  static bool get _android => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  /// Teks lokasi untuk pesan setelah menyimpan.
+  static String pesanTersimpan(String fileName) => lokasiTerakhir == null
+      ? 'File $fileName tersimpan.'
+      : 'Tersimpan di $lokasiTerakhir (buka aplikasi File/Files → Download → LOGEVA).';
+
+  /// Pilih file. Di Android pemilih langsung terbuka di folder Download
+  /// (tempat file Bluetooth, Quick Share & LOGEVA). null = batal.
+  static Future<({String name, Uint8List bytes})?> _pilih() async {
+    if (_android) {
+      try {
+        final hasil = await _kanal.invokeMapMethod<String, Object?>('pilih');
+        if (hasil == null) return null;
+        return (name: hasil['nama'] as String, bytes: hasil['bytes'] as Uint8List);
+      } on MissingPluginException {
+        // lanjut ke pemilih bawaan
+      } on PlatformException catch (e) {
+        if (e.code == 'GAGAL') {
+          throw const FileServiceException('Isi file tidak bisa dibaca.');
+        }
+      }
     }
-
-    final bytes = file.bytes;
-    if (bytes == null) {
-      throw const FileServiceException('Isi file tidak bisa dibaca.');
-    }
-
-    return PickedCsv(
-      name: file.name,
-      content: utf8.decode(bytes, allowMalformed: true),
-    );
-  }
-
-  /// Pilih file ZIP (File Penyiapan / paket sinkron). null = batal.
-  static Future<({String name, Uint8List bytes})?> pickZip() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.any, // file dari Bluetooth sering tanpa jenis yang jelas
       withData: true,
     );
     if (result == null || result.files.isEmpty) return null;
     final file = result.files.single;
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-      throw const FileServiceException('File harus berformat .zip');
-    }
     final bytes = file.bytes;
     if (bytes == null) {
       throw const FileServiceException('Isi file tidak bisa dibaca.');
     }
     return (name: file.name, bytes: bytes);
+  }
+
+  /// Buka pemilih file. Hasil null = pengguna membatalkan.
+  static Future<PickedCsv?> pickCsv() async {
+    final file = await _pilih();
+    if (file == null) return null;
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      throw const FileServiceException('File harus berformat .csv');
+    }
+    return PickedCsv(
+      name: file.name,
+      content: utf8.decode(file.bytes, allowMalformed: true),
+    );
+  }
+
+  /// Pilih file ZIP (File Penyiapan / paket sinkron). null = batal.
+  static Future<({String name, Uint8List bytes})?> pickZip() async {
+    final file = await _pilih();
+    if (file == null) return null;
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      throw const FileServiceException('File harus berformat .zip');
+    }
+    return file;
   }
 
   /// Buka menu Bagikan Android untuk mengirim file ke HP lain (Bluetooth,
@@ -97,12 +123,31 @@ class FileService {
           dialogTitle: 'Simpan file CSV');
 
   /// Simpan file apa pun (misal ZIP Paket Data Posko).
+  /// Di Android 10+ file LANGSUNG masuk ke folder Download/LOGEVA (lihat
+  /// [lokasiTerakhir]); selain itu pengguna memilih lokasi.
   /// Hasil false = pengguna membatalkan.
   static Future<bool> saveBytes(
     String fileName,
     Uint8List bytes, {
     String dialogTitle = 'Simpan file',
   }) async {
+    lokasiTerakhir = null;
+    if (_android) {
+      try {
+        lokasiTerakhir = await _kanal.invokeMethod<String>('simpan', {
+          'nama': fileName,
+          'bytes': bytes,
+          'mime': fileName.toLowerCase().endsWith('.csv')
+              ? 'text/csv'
+              : 'application/zip',
+        });
+        if (lokasiTerakhir != null) return true;
+      } on MissingPluginException {
+        // lanjut ke pemilih lokasi
+      } on PlatformException {
+        // Android 9 ke bawah / gagal: lanjut ke pemilih lokasi
+      }
+    }
     final path = await FilePicker.platform.saveFile(
       dialogTitle: dialogTitle,
       fileName: fileName,

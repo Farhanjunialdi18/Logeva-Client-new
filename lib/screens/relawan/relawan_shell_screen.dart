@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../routes/buka_berkas_masuk.dart';
 import '../../services/perangkat_service.dart';
 import '../../widgets/relawan_bottom_nav.dart';
 import '../sinkron/sinkron_screen.dart';
@@ -31,6 +32,13 @@ class _RelawanShellScreenState extends State<RelawanShellScreen> {
   static const int _tabLogout = 4;
 
   int _index = _tabBeranda;
+
+  @override
+  void initState() {
+    super.initState();
+    // File yang dibuka lewat "Buka dengan LOGEVA" sebelum login.
+    WidgetsBinding.instance.addPostFrameCallback((_) => BukaBerkasMasuk.lanjutkan());
+  }
 
   void _goTo(int index) {
     if (index == _tabLogout) {

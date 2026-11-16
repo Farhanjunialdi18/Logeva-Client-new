@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import '../../../data/data_events.dart';
 import '../../../data/repositories/riwayat_repository.dart';
 import '../../../models/riwayat_transaksi.dart';
+import '../../../services/berkas_masuk_service.dart';
 import '../../../services/file_service.dart';
 import '../../../services/gabung_paket_service.dart';
 import '../../../services/perangkat_service.dart';
@@ -42,6 +43,16 @@ class _ImporWebsiteBagianState extends State<ImporWebsiteBagian> {
   HasilGabung? _pratinjau;
   HasilGabung? _hasil;
 
+  @override
+  void initState() {
+    super.initState();
+    // File dari "Buka dengan LOGEVA" langsung diperiksa.
+    final masuk = BerkasMasukService.ambil(JenisBerkas.paketWebsite);
+    if (masuk != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pilih(masuk));
+    }
+  }
+
   /// Buka kunci paket; kalau salah, minta ulang. null = dibatalkan.
   Future<List<int>?> _buka(List<int> berkas) async {
     String? kataSandi;
@@ -64,10 +75,10 @@ class _ImporWebsiteBagianState extends State<ImporWebsiteBagian> {
     }
   }
 
-  Future<void> _pilih() async {
+  Future<void> _pilih([BerkasMasuk? masuk]) async {
     setState(() => _sibuk = true);
     try {
-      final f = await FileService.pickZip();
+      final f = masuk ?? await FileService.pickZip();
       if (f == null) return;
       final bytes = await _buka(f.bytes);
       if (bytes == null) return;
@@ -79,6 +90,10 @@ class _ImporWebsiteBagianState extends State<ImporWebsiteBagian> {
         _pratinjau = cek;
         _hasil = null;
       });
+      // Dibuka dari luar aplikasi: gulir ke pratinjau.
+      if (masuk != null && mounted) {
+        Scrollable.ensureVisible(context, duration: const Duration(milliseconds: 300));
+      }
     } on GabungException catch (e) {
       if (mounted) AppSnackbar.show(context, e.message, isError: true);
     } on BerkasTerkunciException catch (e) {

@@ -37,7 +37,7 @@ class _PengaturanDataScreenState extends State<PengaturanDataScreen> {
         CsvService.encode(headers, const []),
       );
       if (!mounted) return;
-      if (saved) AppSnackbar.show(context, 'Template $fileName disimpan.');
+      if (saved) AppSnackbar.show(context, FileService.pesanTersimpan(fileName));
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.show(context, 'Gagal menyimpan template: $e', isError: true);
@@ -144,13 +144,13 @@ class _PengaturanDataScreenState extends State<PengaturanDataScreen> {
             _formatCard(
               judul: 'DATA PENGUNGSI',
               headers: PengungsiCsv.headers,
-              fileName: 'template_pengungsi.csv',
+              fileName: 'LOGEVA_template_pengungsi.csv',
             ),
             const SizedBox(height: 14),
             _formatCard(
               judul: 'MASTER BARANG',
               headers: MasterBarangCsv.headers,
-              fileName: 'template_master_barang.csv',
+              fileName: 'LOGEVA_template_master_barang.csv',
             ),
             const SizedBox(height: 14),
 

@@ -152,9 +152,9 @@ void main() {
 
   test('nama file sesuai §8', () async {
     final paket = await kumpulkan([posko]);
-    expect(paket.namaFile, 'paket_BalaiDesaPanggarangan_20261023-1405.zip');
+    expect(paket.namaFile, 'LOGEVA_paket_BalaiDesaPanggarangan_20261023-1405.zip');
     expect((await kumpulkan([posko, lain])).namaFile,
-        'paket_SemuaPosko_20261023-1405.zip');
+        'LOGEVA_paket_SemuaPosko_20261023-1405.zip');
   });
 
   test('ZIP berisi 7 CSV di akar dengan judul kolom persis', () async {

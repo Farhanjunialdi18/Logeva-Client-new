@@ -46,7 +46,7 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
 1. HP Induk: Data → Data Posko → posko → **SIAPKAN HP ANGGOTA**.
    - [ ] Terlihat daftar relawan & admin yang ikut. Tidak ada tulisan PIN/password asli.
 2. **BAGIKAN (BLUETOOTH / QUICK SHARE)** → konfirmasi → pilih **Bluetooth** (atau Quick Share) → pilih HP 2.
-3. HP 2: terima file. Buka aplikasi → **Siapkan HP ini dari HP Induk** → **PILIH FILE PENYIAPAN** →
+3. HP 2: terima file, ketuk file di notifikasi/aplikasi File → **Buka dengan LOGEVA** (atau: Buka aplikasi → **Siapkan HP ini dari HP Induk** → **PILIH FILE PENYIAPAN**) →
    pilih `penyiapan_....zip` (biasanya di folder Download / Bluetooth).
    - [ ] Terlihat isi file: nama posko, jumlah relawan & admin.
 4. **TERAPKAN**.
@@ -65,12 +65,12 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
    **Logistik** → **+ MASUK** → Beras 50 kg, sumber BPBD.
 2. HP Induk (admin): Logistik posko → **+ MASUK** → Air Mineral 100 liter. Pengungsi → tambah `Budi Santoso`.
 3. HP 2: beranda → **SINKRON DENGAN HP INDUK** → **KIRIM KE HP INDUK** → konfirmasi → Bluetooth → HP 1.
-4. HP Induk: Data → **SINKRON ANTAR-HP** → **PILIH FILE SINKRON** → pilih `sinkron_..._dari-anggota_....zip`.
+4. HP Induk: ketuk file `LOGEVA_sinkron_..._dari-anggota_....zip` yang diterima → **Buka dengan LOGEVA** (login dulu bila diminta). Cara lain: Data → **SINKRON ANTAR-HP** → **PILIH FILE SINKRON**.
    - [ ] Pratinjau: dari Andi, Pengungsi "1 baru", Barang masuk "1 baru".
 5. **GABUNGKAN**.
    - [ ] Siti Aminah muncul di Data Pengungsi HP Induk; stok beras 50.
 6. HP Induk: **KIRIM KE HP ANGGOTA** → Bluetooth → HP 2.
-7. HP 2: Sinkron dengan HP Induk → **PILIH FILE SINKRON** → file `..._dari-induk_....zip` → **GABUNGKAN**.
+7. HP 2: ketuk file `LOGEVA_sinkron_..._dari-induk_....zip` → **Buka dengan LOGEVA** → **GABUNGKAN**.
    - [ ] Budi Santoso & Air Mineral 100 liter sekarang ada di HP 2.
 8. Ulangi langkah 3–5 dengan file yang sama.
    - [ ] Muncul "Semua data di file ini sudah ada di HP ini" (tidak dobel).
@@ -175,7 +175,7 @@ Centang setiap **Hasil yang benar**. Kalau ada yang tidak sesuai, catat nomor la
 
 | Gejala | Kemungkinan penyebab |
 |---|---|
-| Opsi Bluetooth tidak ada di menu Bagikan | Nyalakan Bluetooth dulu; atau pakai Quick Share / **SIMPAN KE FILE** lalu kirim dari aplikasi File |
+| Opsi Bluetooth tidak ada di menu Bagikan | Nyalakan Bluetooth dulu; atau pakai Quick Share / WhatsApp |
 | File tidak ditemukan di HP penerima | Cek folder Download, Bluetooth, atau Quick Share di aplikasi File |
 | "HP ini sudah berisi data…" saat penyiapan | HP Anggota harus baru dipasang (hapus & pasang ulang aplikasi) |
 | "Posko di paket ini tidak ada di HP ini" | HP pengirim belum disiapkan dari HP Induk posko ini |

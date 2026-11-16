@@ -43,7 +43,7 @@ class TransferService {
 
     final hasil = await _export<Pengungsi>(
       jenisData: _labelPengungsi,
-      filePrefix: 'pengungsi_${_namaFile(posko.nama)}',
+      filePrefix: 'LOGEVA_pengungsi_${_namaFile(posko.nama)}',
       headers: PengungsiCsv.headers,
       load: () async => list,
       toRow: PengungsiCsv.toRow,
@@ -187,7 +187,8 @@ class TransferService {
       );
       return TransferResult(
         TransferStatus.success,
-        '${items.length} baris berhasil diekspor ke $fileName',
+        '${items.length} baris berhasil diekspor ke '
+        '${FileService.lokasiTerakhir ?? fileName}',
       );
     } catch (e) {
       await RiwayatRepository.instance.log(

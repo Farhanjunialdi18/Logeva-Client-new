@@ -17,6 +17,7 @@ import 'package:flutter_application_1/models/catatan_logistik.dart';
 import 'package:flutter_application_1/models/pengungsi.dart';
 import 'package:flutter_application_1/models/posko.dart';
 import 'package:flutter_application_1/models/relawan.dart';
+import 'package:flutter_application_1/services/berkas_masuk_service.dart';
 import 'package:flutter_application_1/services/gabung_paket_service.dart';
 import 'package:flutter_application_1/services/penyiapan_service.dart';
 import 'package:flutter_application_1/services/sinkron_service.dart';
@@ -190,5 +191,39 @@ void main() {
         contains('_dari-anggota_'));
     expect((await SinkronService.buatFile(await poskoDi(induk), store: induk)).$1,
         contains('_dari-induk_'));
+  });
+
+  test('pilih data: hanya pengungsi / hanya logistik yang ikut', () async {
+    await catat(a, 'Siti', masuk: 50);
+    final posko = await poskoDi(a);
+
+    final (_, hanyaPengungsi) = await SinkronService.buatFile(posko,
+        store: a, dibuatOleh: 'x', logistik: false);
+    await SinkronService.terapkan(hanyaPengungsi, store: induk);
+    expect(await namaPengungsi(induk), contains('Siti'));
+    expect(await stokBeras(induk), 0);
+
+    final (_, hanyaLogistik) = await SinkronService.buatFile(posko,
+        store: a, dibuatOleh: 'x', pengungsi: false);
+    await SinkronService.terapkan(hanyaLogistik, store: b);
+    expect(await namaPengungsi(b), isNot(contains('Siti')));
+    expect(await stokBeras(b), 50);
+
+    // Kirim sebagian tidak menghapus data lain di HP tujuan.
+    await SinkronService.terapkan(hanyaLogistik, store: induk);
+    expect(await namaPengungsi(induk), contains('Siti'));
+    expect(await stokBeras(induk), 50);
+  });
+
+  test('Buka dengan LOGEVA: file sinkron & penyiapan dikenali', () async {
+    final (nSinkron, fSinkron) =
+        await SinkronService.buatFile(await poskoDi(induk), store: induk);
+    expect(BerkasMasukService.kenali(nSinkron, fSinkron), JenisBerkas.sinkron);
+    // Nama diubah (misal oleh WhatsApp) tetap dikenali dari isinya.
+    expect(BerkasMasukService.kenali('dokumen.zip', fSinkron), JenisBerkas.sinkron);
+
+    final (nSiap, fSiap) = await PenyiapanService.buat(await poskoDi(induk), store: induk);
+    expect(BerkasMasukService.kenali(nSiap, fSiap), JenisBerkas.penyiapan);
+    expect(BerkasMasukService.kenali('foto.zip', [1, 2, 3]), JenisBerkas.tidakDikenal);
   });
 }
