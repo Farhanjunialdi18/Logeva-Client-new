@@ -1,31 +1,25 @@
 // ============================================================
 // terima_penyiapan_screen.dart
-// SIAPKAN HP INI DARI HP INDUK (di HP Anggota): pilih File Penyiapan
-// yang diterima lewat Bluetooth / Quick Share / flashdisk, periksa
-// isinya, lalu terapkan. Tanpa internet sama sekali.
+// SIAPKAN HP INI DARI HP INDUK (di HP Anggota). Cara utama TANPA mencari
+// file: admin menekan BAGIKAN di HP Induk, lalu di HP ini file ZIP yang
+// diterima diketuk -> Buka dengan LOGEVA -> YA, SINKRONKAN.
+// Halaman ini hanya petunjuk + jalan cadangan memilih file manual.
+// Proses sebenarnya ada di widgets/sinkron_otomatis.dart.
 // ============================================================
-
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
 import '../../services/berkas_masuk_service.dart';
 import '../../services/file_service.dart';
-import '../../services/gabung_paket_service.dart';
-import '../../services/penyiapan_service.dart';
-import '../../services/perangkat_service.dart';
 import '../../services/session_service.dart';
-import '../../services/sinkron_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_snackbar.dart';
 import '../../widgets/app_background.dart';
-import '../../widgets/info_card.dart';
 import '../../widgets/langkah_card.dart';
 import '../../widgets/page_header.dart';
-import '../../widgets/primary_button.dart';
-import '../../widgets/secondary_button.dart';
+import '../../widgets/sinkron_otomatis.dart';
 
 class TerimaPenyiapanScreen extends StatefulWidget {
   const TerimaPenyiapanScreen({super.key});
@@ -35,12 +29,6 @@ class TerimaPenyiapanScreen extends StatefulWidget {
 }
 
 class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
-  FilePenyiapan? _file;
-  Uint8List? _bytes;
-  /// Data posko yang ikut di file (null = file lama, hanya akun).
-  ({int pengungsi, int masuk, int keluar})? _isiData;
-  String? _namaFile;
-  String? _ditolak; // alasan file tidak bisa dipakai di HP ini
   bool _sibuk = false;
 
   @override
@@ -48,28 +36,22 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
     super.initState();
     final masuk = BerkasMasukService.ambil(JenisBerkas.penyiapan);
     if (masuk != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _pilih(masuk));
+      WidgetsBinding.instance.addPostFrameCallback((_) => _proses(masuk));
     }
   }
 
-  /// [masuk] = file dari "Buka dengan LOGEVA"; kosong = pilih file.
-  Future<void> _pilih([BerkasMasuk? masuk]) async {
+  /// [masuk] = file dari "Buka dengan LOGEVA"; kosong = pilih file manual.
+  Future<void> _proses([BerkasMasuk? masuk]) async {
     setState(() => _sibuk = true);
     try {
       final f = masuk ?? await FileService.pickZip();
-      if (f == null) return;
-      final file = PenyiapanService.baca(f.bytes);
-      final alasan = await PenyiapanService.cekBoleh(file);
-      if (!mounted) return;
-      setState(() {
-        _file = file;
-        _bytes = f.bytes;
-        _isiData = SinkronService.ringkasanIsi(f.bytes);
-        _namaFile = f.name;
-        _ditolak = alasan;
-      });
-    } on PenyiapanException catch (e) {
-      if (mounted) AppSnackbar.show(context, e.message, isError: true);
+      if (f == null || !mounted) return;
+      final siap = await SinkronOtomatis.penyiapan(context, f.bytes);
+      if (!siap || !mounted) return;
+      SessionService.instance.clear();
+      final nav = Navigator.of(context);
+      nav.pushNamedAndRemoveUntil(AppRoutes.roleSelection, (_) => false);
+      nav.pushNamed(AppRoutes.relawanLogin);
     } on FileServiceException catch (e) {
       if (mounted) AppSnackbar.show(context, e.message, isError: true);
     } finally {
@@ -77,44 +59,9 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
     }
   }
 
-  Future<void> _terapkan() async {
-    final file = _file;
-    if (file == null) return;
-    setState(() => _sibuk = true);
-    try {
-      var pesan = await PenyiapanService.terapkan(file);
-      // Data posko yang ikut di file langsung digabung ke HP ini.
-      final bytes = _bytes;
-      if (_isiData != null && bytes != null) {
-        try {
-          final hasil = await GabungPaketService.terapkan(bytes);
-          pesan = '$pesan Data posko tersinkron (${hasil.ringkasan}).';
-        } on GabungException catch (e) {
-          pesan = '$pesan Data posko belum masuk: ${e.message} Coba kirim '
-              'ulang file dari HP Induk.';
-        }
-      }
-      await PerangkatService.muat();
-      if (!mounted) return;
-      AppSnackbar.show(context, '$pesan Hapus file penyiapan dari HP ini.',
-          duration: const Duration(seconds: 8));
-      // Akun di HP ini sudah berganti: sesi lama (misal admin bawaan) ditutup,
-      // lalu relawan langsung login dengan PIN-nya.
-      SessionService.instance.clear();
-      final nav = Navigator.of(context);
-      nav.pushNamedAndRemoveUntil(AppRoutes.roleSelection, (_) => false);
-      nav.pushNamed(AppRoutes.relawanLogin);
-    } on PenyiapanException catch (e) {
-      if (!mounted) return;
-      setState(() => _sibuk = false);
-      AppSnackbar.show(context, e.message, isError: true);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
-    final file = _file;
 
     return Scaffold(
       body: AppBackground(
@@ -128,67 +75,41 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
             ),
             const SizedBox(height: 16),
             const LangkahCard(
-              title: 'CARA PAKAI',
+              title: 'CARA PAKAI (TANPA CARI FILE)',
               langkah: [
-                'Di HP Induk (admin): Data Posko → pilih posko → SIAPKAN HP '
-                    'ANGGOTA → Bagikan lewat Bluetooth / Quick Share.',
-                'Di HP ini, ketuk file yang diterima (notifikasi Quick Share, '
-                    'WhatsApp, atau aplikasi File) lalu pilih Buka dengan LOGEVA. '
-                    'Atau tekan PILIH FILE di bawah.',
-                'Periksa isinya, lalu tekan SIAPKAN & SINKRONKAN.',
-                'Login dengan PIN dari admin; data posko langsung muncul.',
+                'Nyalakan Bluetooth di HP ini.',
+                'Minta admin: Relawan → pilih nama Anda → BAGIKAN KE HP RELAWAN '
+                    '→ Bluetooth / Quick Share → pilih HP ini.',
+                'Terima file di HP ini, lalu KETUK NOTIFIKASI file yang masuk '
+                    '→ Buka dengan LOGEVA.',
+                'Tekan YA, SINKRONKAN, tunggu sampai selesai, lalu login '
+                    'dengan PIN dari admin.',
               ],
-              note: 'Tidak perlu internet. Setelah diterapkan, HP ini menjadi '
-                  'HP Anggota posko tersebut.',
+              note: 'Tidak perlu internet dan tidak perlu mencari file. Kalau HP '
+                  'ini sudah berisi data lain, LOGEVA menawarkan untuk '
+                  'mengosongkannya (cadangan dibuat otomatis).',
             ),
             const SizedBox(height: 16),
-            SecondaryButton(
-              text: file == null ? 'PILIH FILE PENYIAPAN' : 'PILIH FILE LAIN',
-              icon: Icons.folder_open_rounded,
-              height: 54,
-              isLoading: _sibuk && file == null,
-              onPressed: _sibuk ? null : _pilih,
+            Text(
+              'Notifikasinya terlewat? Minta admin mengirim ulang lewat Quick '
+              'Share atau Bluetooth, lalu langsung ketuk notifikasi yang muncul.',
+              style: AppTextStyles.small(p),
             ),
-            if (file != null) ...[
-              const SizedBox(height: 16),
-              InfoCard(
-                title: 'ISI FILE',
-                rows: {
-                  'File': _namaFile ?? '-',
-                  'Posko': file.namaPosko,
-                  'Dibuat': '${file.dibuatPada} WIB'
-                      '${file.dibuatOleh.isEmpty ? '' : ' oleh ${file.dibuatOleh}'}',
-                  'Relawan': '${file.relawan.length} akun',
-                  'Admin': '${file.admin.length} akun',
-                  'Master barang': '${file.barang.length} barang',
-                  if (_isiData != null)
-                    'Data posko': '${_isiData!.pengungsi} pengungsi, '
-                        '${_isiData!.masuk} barang masuk, '
-                        '${_isiData!.keluar} barang keluar',
-                },
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: _sibuk ? null : () => _proses(),
+                icon: _sibuk
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.folder_open_rounded,
+                        size: 18, color: AppColors.primary),
+                label: const Text('Atau pilih file manual'),
               ),
-              const SizedBox(height: 14),
-              if (_ditolak != null)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(14),
-                    border:
-                        Border.all(color: AppColors.error.withValues(alpha: 0.5)),
-                  ),
-                  child: Text(_ditolak!,
-                      style:
-                          AppTextStyles.small(p).copyWith(color: p.textPrimary)),
-                )
-              else
-                PrimaryButton(
-                  text: _isiData != null ? 'SIAPKAN & SINKRONKAN' : 'TERAPKAN',
-                  isLoading: _sibuk,
-                  onPressed: _terapkan,
-                ),
-            ],
+            ),
             const SizedBox(height: 24),
           ],
         ),

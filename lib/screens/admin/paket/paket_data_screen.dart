@@ -150,8 +150,9 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
               child: const ListTile(
                 leading: Icon(Icons.sd_storage_rounded),
                 title: Text('Flashdisk (USB OTG)'),
-                subtitle: Text('Colok flashdisk ke HP, lalu pilih '
-                    'flashdisk sebagai lokasi simpan.'),
+                subtitle: Text('Colok flashdisk ke HP. File langsung masuk '
+                    'ke folder LOGEVA di flashdisk (pertama kali: tekan '
+                    'Izinkan sekali).'),
               ),
             ),
             SimpleDialogOption(

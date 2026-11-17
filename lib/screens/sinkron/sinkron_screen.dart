@@ -12,9 +12,11 @@ import 'package:flutter/material.dart';
 
 import '../../data/data_events.dart';
 import '../../data/repositories/logistik_repository.dart';
+import '../../data/repositories/pengaturan_repository.dart';
 import '../../data/repositories/posko_repository.dart';
 import '../../data/repositories/riwayat_repository.dart';
 import '../../models/posko.dart';
+import '../../routes/buka_berkas_masuk.dart';
 import '../../models/riwayat_transaksi.dart';
 import '../../services/dobel_service.dart';
 import '../../services/berkas_masuk_service.dart';
@@ -34,7 +36,8 @@ import '../../widgets/info_card.dart';
 import '../../widgets/langkah_card.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/primary_button.dart';
-import '../../widgets/secondary_button.dart';
+import '../../utils/waktu_wib.dart';
+import '../../widgets/status_kirim_card.dart';
 import '../admin/data/pengungsi_dobel_screen.dart';
 
 class SinkronScreen extends StatefulWidget {
@@ -127,14 +130,22 @@ class _SinkronScreenState extends State<SinkronScreen> {
 
     setState(() => _mengirim = true);
     try {
+      final waktu = DateTime.now();
       final (nama, bytes) = await SinkronService.buatFile(
         posko,
         dibuatOleh: SessionService.instance.namaPencatat,
         pengungsi: _pengungsiDikirim,
         logistik: _logistikDikirim,
+        waktu: waktu,
+        kodeRelawan: await SinkronService.kodeRelawanLogin(),
       );
       final ok =
           await FileService.bagikan(nama, bytes, judul: 'Kirim File Sinkron');
+      if (ok && _anggota && _pengungsiDikirim && _logistikDikirim) {
+        // Semua data terkirim: status "belum terkirim" kembali nol.
+        await PengaturanRepository.instance.tandaiTerkirim(WaktuWib.tanggalWaktu(waktu));
+        DataEvents.instance.notifyChanged();
+      }
       if (ok) {
         await RiwayatRepository.instance.log(
           jenis: RiwayatTransaksi.jenisExport,
@@ -269,6 +280,8 @@ class _SinkronScreenState extends State<SinkronScreen> {
       });
       AppSnackbar.show(context, 'Data digabung. ${hasil.ringkasan}. Hapus file sinkron.');
       await _load();
+      // Akun relawan yang login dinonaktifkan/dihapus admin -> keluar.
+      await BukaBerkasMasuk.periksaAkunRelawan();
     } on GabungException catch (e) {
       await RiwayatRepository.instance.log(
         jenis: RiwayatTransaksi.jenisImport,
@@ -394,6 +407,10 @@ class _SinkronScreenState extends State<SinkronScreen> {
                   'LOGEVA. Pastikan tanggal & jam di semua HP benar.',
             ),
             const SizedBox(height: 20),
+            if (_anggota) ...[
+              const StatusKirimCard(tampilkanTombol: false),
+              const SizedBox(height: 20),
+            ],
 
             // ---- KIRIM ----
             Text('KIRIM', style: AppTextStyles.label(p)),
@@ -435,12 +452,27 @@ class _SinkronScreenState extends State<SinkronScreen> {
             // ---- TERIMA ----
             Text('TERIMA', style: AppTextStyles.label(p)),
             const SizedBox(height: 10),
-            SecondaryButton(
-              text: cek == null ? 'PILIH FILE SINKRON' : 'PILIH FILE LAIN',
-              icon: Icons.folder_open_rounded,
-              height: 54,
-              isLoading: _menerima && cek == null,
-              onPressed: _menerima ? null : _pilih,
+            // Cara utama tanpa mencari file: ketuk notifikasi file masuk.
+            _kotak(
+              AppColors.accentBlue,
+              Icons.notifications_active_rounded,
+              'Tidak perlu mencari file: saat file dari '
+              '${_anggota ? 'HP Induk' : 'HP relawan'} masuk lewat Bluetooth / '
+              'Quick Share, KETUK NOTIFIKASINYA → Buka dengan LOGEVA → YA, '
+              'SINKRONKAN. Notifikasi terlewat? Minta dikirim ulang.',
+            ),
+            Center(
+              child: TextButton.icon(
+                onPressed: _menerima ? null : _pilih,
+                icon: _menerima && cek == null
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.folder_open_rounded, size: 18),
+                label: Text(cek == null ? 'Atau pilih file manual' : 'Pilih file lain'),
+              ),
             ),
             if (cek != null) ..._bagianPratinjau(cek),
             if (cek == null && _dobel > 0) ...[

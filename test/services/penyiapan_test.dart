@@ -161,6 +161,70 @@ void main() {
     expect(await PengaturanRepository.withStore(anggota).isAnggota(), isFalse);
   });
 
+  test('HP berisi data: setelah dikosongkan bisa disiapkan', () async {
+    // HP relawan yang sempat dipakai coba-coba: ganti password admin,
+    // buat posko sendiri, catat pengungsi.
+    final adminAnggota = AdminRepository.withStore(anggota);
+    await adminAnggota.ensureDefaultAdmin();
+    await adminAnggota.gantiPassword((await adminAnggota.getAll()).single, 'cobacoba1');
+    final poskoCoba = await PoskoRepository.withStore(anggota).add(Posko.baru(
+      nama: 'Coba', namaDesa: 'X', alamat: 'Y', luasLokasi: 10,
+      latitude: '-6', longitude: '106',
+    ));
+    await PengungsiRepository.withStore(anggota).add(Pengungsi.baru(
+      poskoId: poskoCoba.id!, nama: 'X', asal: 'Y', tanggalLahir: DateTime(1990),
+      jenisKelamin: DataOptions.lakiLaki,
+    ));
+    final pengaturan = PengaturanRepository.withStore(anggota);
+    final kodeHp = await pengaturan.kodePerangkat();
+
+    final file = await buatFile();
+    expect(await PenyiapanService.cekBoleh(file, store: anggota), isNotNull);
+    final isi = await PenyiapanService.isiHp(store: anggota);
+    expect((isi.posko, isi.pengungsi, isi.admin), (1, 1, 1));
+
+    await PenyiapanService.kosongkan(store: anggota);
+    final kosong = await PenyiapanService.isiHp(store: anggota);
+    expect((kosong.posko, kosong.pengungsi, kosong.admin), (0, 0, 0));
+    final admin = (await adminAnggota.getAll()).single;
+    expect(adminAnggota.masihPasswordBawaan(admin), isTrue,
+        reason: 'admin kembali ke akun bawaan');
+    expect(await PengaturanRepository.withStore(anggota).kodePerangkat(), kodeHp,
+        reason: 'kode perangkat dipertahankan');
+
+    expect(await PenyiapanService.cekBoleh(file, store: anggota), isNull);
+    await PenyiapanService.terapkan(file, store: anggota);
+    expect(await RelawanRepository.withStore(anggota).findByPin('111111'), isNotNull);
+  });
+
+  test('HP Anggota posko lain: dikosongkan lalu pindah posko', () async {
+    await PenyiapanService.terapkan(await buatFile(), store: anggota);
+    // HP Induk lain (posko lain) -> file berbeda induk ditolak
+    final indukLain = SqliteTableStore(
+        path: '${folder.path}/induk2.db', factory: databaseFactoryFfi);
+    final adminLain = AdminRepository.withStore(indukLain);
+    await adminLain.ensureDefaultAdmin();
+    await adminLain.gantiPassword((await adminLain.getAll()).single, 'lain2026');
+    final poskoLain = await PoskoRepository.withStore(indukLain).add(Posko.baru(
+      nama: 'Masjid', namaDesa: 'A', alamat: 'B', luasLokasi: 10,
+      latitude: '-6', longitude: '106',
+    ));
+    await RelawanRepository.withStore(indukLain).add(Relawan(
+        nama: 'Rina', pin: '555555', dibuatPada: DateTime(2026)).tempatkan(poskoLain));
+    final (_, bytes) = await PenyiapanService.buat(poskoLain, store: indukLain);
+    final fileLain = PenyiapanService.baca(bytes);
+
+    expect(await PenyiapanService.cekBoleh(fileLain, store: anggota), isNotNull);
+    await PenyiapanService.kosongkan(store: anggota);
+    expect(await PengaturanRepository.withStore(anggota).isAnggota(), isFalse);
+    expect(await PenyiapanService.cekBoleh(fileLain, store: anggota), isNull);
+    await PenyiapanService.terapkan(fileLain, store: anggota);
+    final relawan = RelawanRepository.withStore(anggota);
+    expect(await relawan.findByPin('555555'), isNotNull);
+    expect(await relawan.findByPin('111111'), isNull, reason: 'akun posko lama hilang');
+    await indukLain.close();
+  });
+
   test('HP Anggota tidak bisa membuat File Penyiapan', () async {
     await PenyiapanService.terapkan(await buatFile(), store: anggota);
     final p = (await PoskoRepository.withStore(anggota).getAll()).single;

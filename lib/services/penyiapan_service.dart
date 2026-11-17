@@ -247,6 +247,59 @@ class PenyiapanService {
   static const String kunciKodeInduk = 'kode_perangkat_induk';
   static const String kunciKodePosko = 'posko_anggota';
 
+  /// Apa saja yang akan hilang kalau HP ini dikosongkan (untuk konfirmasi).
+  static Future<({int posko, int relawan, int pengungsi, int logistik, int admin})>
+      isiHp({TableStore? store}) async {
+    final s = _s(store);
+    final adminRepo = AdminRepository.withStore(s);
+    return (
+      posko: await s.count(DatabaseTables.posko),
+      relawan: await s.count(DatabaseTables.relawan),
+      pengungsi: await s.count(DatabaseTables.pengungsi),
+      logistik: await s.count(DatabaseTables.barangMasuk) +
+          await s.count(DatabaseTables.barangKeluar),
+      admin: (await adminRepo.getAll()).where((a) => !adminRepo.masihPasswordBawaan(a)).length,
+    );
+  }
+
+  /// KOSONGKAN HP ini supaya bisa disiapkan dari HP Induk (misal HP relawan
+  /// yang sempat dipakai coba-coba, atau pindah posko). Posko, akun, data
+  /// pengungsi, logistik & riwayat dihapus; admin kembali ke akun bawaan.
+  /// Kode perangkat & pengaturan tampilan dipertahankan.
+  /// Pemanggil WAJIB membuat cadangan lebih dulu.
+  static Future<void> kosongkan({TableStore? store}) async {
+    final s = _s(store);
+    bool dibuang(String k) =>
+        k == kunciKodeInduk ||
+        k == kunciKodePosko ||
+        k == PengaturanRepository.kunciPeranPerangkat ||
+        k == kunciImporWebsiteTerakhir ||
+        k == PengaturanRepository.kunciBelumTerkirim ||
+        k == PengaturanRepository.kunciTerakhirKirim ||
+        k == PengaturanRepository.kunciDiterimaInduk ||
+        k.startsWith(awalanRiwayatSinkron);
+    final pengaturan = (await s.getAll(DatabaseTables.pengaturan))
+        .where((r) => !dibuang(r['kunci'] as String? ?? ''))
+        .toList();
+    await s.gantiSemua({
+      DatabaseTables.posko: const [],
+      DatabaseTables.relawan: const [],
+      DatabaseTables.admin: const [],
+      DatabaseTables.pengungsi: const [],
+      DatabaseTables.barangMasuk: const [],
+      DatabaseTables.barangKeluar: const [],
+      DatabaseTables.riwayat: const [],
+      DatabaseTables.pengaturan: pengaturan,
+    });
+    await AdminRepository.withStore(s).ensureDefaultAdmin();
+    DataEvents.instance.notifyChanged();
+  }
+
+  // Sama dengan GabungPaketService.awalanRiwayat / kunciImporWebsite
+  // (ditulis ulang supaya tidak saling impor).
+  static const String awalanRiwayatSinkron = 'sinkron_dari_';
+  static const String kunciImporWebsiteTerakhir = 'impor_website_terakhir';
+
   /// Terapkan [file] ke HP ini. Hasil: ringkasan untuk ditampilkan.
   static Future<String> terapkan(FilePenyiapan file, {TableStore? store}) async {
     final s = _s(store);

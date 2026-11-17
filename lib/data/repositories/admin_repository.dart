@@ -12,6 +12,7 @@ import '../data_events.dart';
 import '../database_tables.dart';
 import '../local_database.dart';
 import '../table_store.dart';
+import 'pengaturan_repository.dart';
 
 class AdminRepository {
   AdminRepository._(this._store);
@@ -113,6 +114,7 @@ class AdminRepository {
       dibuatPada: DateTime.now(),
     );
     await _store.insert(_table, admin.toMap());
+    await PengaturanRepository.withStore(_store).tandaiAkunBerubah();
     DataEvents.instance.notifyChanged();
   }
 
@@ -131,6 +133,7 @@ class AdminRepository {
     }
     if (data.id != null) {
       await _store.update(_table, data.id!, data.toMap());
+      await PengaturanRepository.withStore(_store).tandaiAkunBerubah();
       DataEvents.instance.notifyChanged();
     }
     return data;
@@ -165,6 +168,7 @@ class AdminRepository {
 
   Future<void> delete(int id) async {
     await _store.delete(_table, id);
+    await PengaturanRepository.withStore(_store).tandaiAkunBerubah();
     DataEvents.instance.notifyChanged();
   }
 }

@@ -9,8 +9,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/data_options.dart';
 import '../../../data/data_events.dart';
+import '../../../data/repositories/posko_repository.dart';
 import '../../../data/repositories/relawan_repository.dart';
 import '../../../models/relawan.dart';
+import '../../../services/file_service.dart';
+import '../../../services/penyiapan_service.dart';
+import '../../../services/session_service.dart';
+import '../../../services/sinkron_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/app_snackbar.dart';
@@ -26,6 +31,7 @@ import '../../../widgets/secondary_button.dart';
 import '../../../widgets/status_dot.dart';
 import '../../../services/perangkat_service.dart';
 import '../../../widgets/dikelola_induk_banner.dart';
+import '../../../widgets/status_hp_relawan.dart';
 import 'relawan_akun_form_screen.dart';
 
 class RelawanAkunDetailScreen extends StatefulWidget {
@@ -44,6 +50,7 @@ class _RelawanAkunDetailScreenState extends State<RelawanAkunDetailScreen> {
   bool _tampilkanPin = false;
   bool _generating = false;
   bool _busy = false;
+  bool _membagikan = false;
 
   @override
   void initState() {
@@ -85,6 +92,79 @@ class _RelawanAkunDetailScreenState extends State<RelawanAkunDetailScreen> {
       _tampilkanPin = true; // langsung tampilkan PIN barunya
     });
     AppSnackbar.show(context, 'PIN baru: ${baru.pin}');
+  }
+
+  /// Kirim akun relawan (beserta akun lain & data posko-nya) ke HP relawan
+  /// lewat menu Bagikan: Bluetooth / Quick Share / WhatsApp.
+  Future<void> _bagikan(Relawan relawan) async {
+    final poskoId = relawan.poskoId;
+    if (poskoId == null) {
+      AppSnackbar.show(context, 'Tempatkan relawan di posko dulu (EDIT RELAWAN).',
+          isError: true);
+      return;
+    }
+    if (!relawan.isAktif) {
+      AppSnackbar.show(context, 'Aktifkan relawan dulu supaya bisa login.',
+          isError: true);
+      return;
+    }
+    final posko = await PoskoRepository.instance.findById(poskoId);
+    if (!mounted || posko == null) return;
+    final rencana = await PenyiapanService.rencana(posko);
+    if (!mounted) return;
+    if (!rencana.bisaDibuat) {
+      AppSnackbar.show(
+          context,
+          'Ganti dulu password bawaan admin (Settings → Keamanan) sebelum '
+          'membagikan akun.',
+          isError: true);
+      return;
+    }
+
+    final yakin = await ConfirmDialog.show(
+      context,
+      title: 'Bagikan ke HP ${relawan.nama}?',
+      message: 'File berisi akun posko ${posko.nama} (PIN sudah diacak) serta '
+          'data pengungsi & logistik posko. Pilih Bluetooth atau Quick Share, '
+          'lalu pilih HP relawan.\n\nDi HP relawan: ketuk file ZIP → Buka dengan '
+          'LOGEVA → YA, SINKRONKAN → login dengan PIN.',
+      confirmText: 'BAGIKAN',
+    );
+    if (!yakin || !mounted) return;
+
+    setState(() => _membagikan = true);
+    try {
+      final waktu = DateTime.now();
+      final (nama, bytes) = await SinkronService.buatFile(
+        posko,
+        dibuatOleh: SessionService.instance.namaPencatat,
+        awalanNama: 'LOGEVA_penyiapan_',
+        waktu: waktu,
+      );
+      final terkirim =
+          await FileService.bagikan(nama, bytes, judul: 'Kirim ke HP ${relawan.nama}');
+      if (terkirim) {
+        // Pengingat "perlu dibagikan ulang" untuk relawan ini hilang.
+        await SinkronService.tandaiDibagikan(relawan.kode, waktu);
+        DataEvents.instance.notifyChanged();
+      }
+      if (!mounted) return;
+      if (terkirim) {
+        AppSnackbar.show(
+          context,
+          relawan.pinTerlihat
+              ? 'File terkirim. Beritahukan PIN ${relawan.nama}: ${relawan.pin}'
+              : 'File terkirim. Beritahukan PIN ke ${relawan.nama}.',
+          duration: const Duration(seconds: 10),
+        );
+      }
+    } on PenyiapanException catch (e) {
+      if (mounted) AppSnackbar.show(context, e.message, isError: true);
+    } catch (e) {
+      if (mounted) AppSnackbar.show(context, 'Gagal: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _membagikan = false);
+    }
   }
 
   void _edit(Relawan relawan) {
@@ -220,9 +300,17 @@ class _RelawanAkunDetailScreenState extends State<RelawanAkunDetailScreen> {
               if (PerangkatService.isAnggota)
                 const DikelolaIndukBanner()
               else ...[
+                StatusHpRelawanCard(relawan: relawan),
+                const SizedBox(height: 16),
                 PrimaryButton(
                   text: _tampilkanPin ? 'SEMBUNYIKAN PIN' : 'LIHAT PIN',
                   onPressed: () => setState(() => _tampilkanPin = !_tampilkanPin),
+                ),
+                const SizedBox(height: 12),
+                PrimaryButton(
+                  text: 'BAGIKAN KE HP RELAWAN (BLUETOOTH)',
+                  isLoading: _membagikan,
+                  onPressed: () => _bagikan(relawan),
                 ),
                 const SizedBox(height: 12),
                 SecondaryButton(

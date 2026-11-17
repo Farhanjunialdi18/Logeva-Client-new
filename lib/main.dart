@@ -14,6 +14,7 @@ import 'services/perangkat_service.dart';
 import 'services/peringatan_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
+import 'widgets/pilih_dari_flashdisk.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,9 @@ Future<void> main() async {
   PeringatanService.mulai();
   // File ZIP yang dibuka lewat "Buka dengan LOGEVA" (Quick Share, WhatsApp, File).
   BukaBerkasMasuk.mulai();
+  // Impor: kalau flashdisk tercolok, tampilkan daftar file flashdisk
+  // (tanpa pemilih file Android).
+  PilihDariFlashdisk.pasang();
 }
 
 class LogevaApp extends StatelessWidget {

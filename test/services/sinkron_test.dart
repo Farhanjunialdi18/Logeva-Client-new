@@ -9,6 +9,7 @@ import 'package:flutter_application_1/core/data_options.dart';
 import 'package:flutter_application_1/data/repositories/admin_repository.dart';
 import 'package:flutter_application_1/data/repositories/barang_repository.dart';
 import 'package:flutter_application_1/data/repositories/logistik_repository.dart';
+import 'package:flutter_application_1/data/repositories/pengaturan_repository.dart';
 import 'package:flutter_application_1/data/repositories/pengungsi_repository.dart';
 import 'package:flutter_application_1/data/repositories/posko_repository.dart';
 import 'package:flutter_application_1/data/repositories/relawan_repository.dart';
@@ -258,5 +259,95 @@ void main() {
     await catat(baru, 'Rina');
     await SinkronService.terapkan(await kirimDari(baru), store: induk);
     expect(await namaPengungsi(induk), {'Ani', 'Rina'});
+  });
+
+  test('status kirim: belum terkirim dihitung, tanda terima dari HP Induk', () async {
+    final pengaturanA = PengaturanRepository.withStore(a);
+    var status = await SinkronService.statusKirim(store: a);
+    expect(status.belumTerkirim, 0);
+    expect(status.terakhirKirim, isNull);
+
+    // Relawan A mencatat 1 pengungsi + 1 barang masuk = 2 perubahan.
+    await catat(a, 'Siti', masuk: 10);
+    expect((await SinkronService.statusKirim(store: a)).belumTerkirim, 2);
+
+    // A mengirim ke HP Induk (seperti tombol KIRIM DATA KE ADMIN).
+    final waktuKirim = DateTime.now().subtract(const Duration(minutes: 5));
+    final (_, fileA) = await SinkronService.buatFile(await poskoDi(a),
+        store: a, dibuatOleh: 'Andi', waktu: waktuKirim);
+    await pengaturanA.tandaiTerkirim(WaktuWib.tanggalWaktu(waktuKirim));
+    status = await SinkronService.statusKirim(store: a);
+    expect(status.belumTerkirim, 0);
+    expect(status.terakhirKirim, isNotNull);
+    expect(status.sudahDikonfirmasi, isFalse, reason: 'admin belum menggabungkan');
+
+    // HP Induk menggabungkan, lalu mengirim data gabungan (berisi data B juga).
+    await catat(b, 'Budi');
+    await SinkronService.terapkan(fileA, store: induk);
+    await SinkronService.terapkan(await kirimDari(b), store: induk);
+    final gabungan = await kirimDari(induk);
+    await SinkronService.terapkan(gabungan, store: a);
+
+    status = await SinkronService.statusKirim(store: a);
+    expect(status.sudahDikonfirmasi, isTrue, reason: 'tanda terima dari HP Induk');
+    expect(status.terakhirDariInduk, isNotNull);
+    expect(status.belumTerkirim, 0,
+        reason: 'data Budi dari HP lain tidak dihitung sebagai "belum terkirim"');
+    expect(await namaPengungsi(a), {'Siti', 'Budi'});
+
+    // HP B belum pernah mengirim lewat tombol -> tanda terima ada, tapi
+    // tidak dianggap konfirmasi karena terakhirKirim kosong.
+    await SinkronService.terapkan(gabungan, store: b);
+    expect((await SinkronService.statusKirim(store: b)).sudahDikonfirmasi, isFalse);
+
+    // Catatan baru setelah dikonfirmasi = belum terkirim lagi.
+    await catat(a, 'Rina');
+    expect((await SinkronService.statusKirim(store: a)).belumTerkirim, 1);
+  });
+
+  test('pengingat admin: HP relawan perlu dibagikan ulang & belum kirim', () async {
+    final relawanInduk = RelawanRepository.withStore(induk);
+    final andi = (await relawanInduk.getAll()).single;
+
+    // Belum pernah dibagikan dari Detail Relawan / belum pernah kirim.
+    var semua = await SinkronService.statusHpRelawan(store: induk);
+    var s = SinkronService.statusUntuk(semua, andi.kode);
+    expect(s.belumPernahDibagikan, isTrue);
+    expect(s.perluDibagikan, isTrue);
+    expect(s.belumKirimHariIni(), isTrue);
+
+    // Admin membagikan ke HP Andi.
+    await SinkronService.tandaiDibagikan(
+        andi.kode, DateTime.now().add(const Duration(seconds: 2)), store: induk);
+    s = SinkronService.statusUntuk(
+        await SinkronService.statusHpRelawan(store: induk), andi.kode);
+    expect(s.perluDibagikan, isFalse);
+
+    // Andi mengirim data dari HP A -> laporan tercatat di HP Induk.
+    await catat(a, 'Siti');
+    final (_, fileA) = await SinkronService.buatFile(await poskoDi(a),
+        store: a, dibuatOleh: 'Andi', kodeRelawan: andi.kode);
+    await SinkronService.terapkan(fileA, store: induk);
+    s = SinkronService.statusUntuk(
+        await SinkronService.statusHpRelawan(store: induk), andi.kode);
+    expect(s.terakhirKirim, isNotNull);
+    expect(s.belumKirimHariIni(), isFalse);
+
+    // Admin mengganti PIN Andi -> akun di HP Andi belum berlaku.
+    await Future<void>.delayed(const Duration(seconds: 3));
+    await relawanInduk.regeneratePin(andi);
+    s = SinkronService.statusUntuk(
+        await SinkronService.statusHpRelawan(store: induk), andi.kode);
+    expect(s.akunBelumBerlaku, isTrue);
+    expect(s.perluDibagikan, isTrue);
+
+    // Admin membagikan ulang -> pengingat hilang.
+    await SinkronService.tandaiDibagikan(
+        andi.kode, DateTime.now().add(const Duration(seconds: 2)), store: induk);
+    s = SinkronService.statusUntuk(
+        await SinkronService.statusHpRelawan(store: induk), andi.kode);
+    expect(s.akunBelumBerlaku, isFalse);
+    expect(s.adaDataBaru, isFalse);
+    expect(s.perluDibagikan, isFalse);
   });
 }

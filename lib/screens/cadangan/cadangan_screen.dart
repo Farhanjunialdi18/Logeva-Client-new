@@ -54,7 +54,7 @@ class _CadanganScreenState extends State<CadanganScreen> {
     }
   }
 
-  Future<void> _cadangkan({required bool bagikan}) async {
+  Future<void> _cadangkan({bool bagikan = false, bool flashdisk = false}) async {
     final lanjut = await ConfirmDialog.show(
       context,
       title: 'Data pribadi & akun',
@@ -69,14 +69,22 @@ class _CadanganScreenState extends State<CadanganScreen> {
       final (nama, bytes) = await CadanganService.buat();
       final ok = bagikan
           ? await FileService.bagikan(nama, bytes, judul: 'Kirim cadangan')
-          : await FileService.saveBytes(nama, bytes, dialogTitle: 'Simpan cadangan');
+          : flashdisk
+              ? await FileService.simpanKeFlashdisk(nama, bytes)
+              : await FileService.saveBytes(nama, bytes, dialogTitle: 'Simpan cadangan');
       if (mounted && ok) {
         AppSnackbar.show(
           context,
-          bagikan ? 'Cadangan $nama dibuat.' : FileService.pesanTersimpan(nama),
+          bagikan
+              ? 'Cadangan $nama dibuat.'
+              : flashdisk
+                  ? 'Tersimpan di flashdisk: ${FileService.lokasiTerakhir ?? nama}'
+                  : FileService.pesanTersimpan(nama),
           duration: const Duration(seconds: 8),
         );
       }
+    } on FileServiceException catch (e) {
+      if (mounted) AppSnackbar.show(context, e.message, isError: true);
     } catch (e) {
       if (mounted) AppSnackbar.show(context, 'Cadangan gagal dibuat: $e', isError: true);
     } finally {
@@ -188,7 +196,13 @@ class _CadanganScreenState extends State<CadanganScreen> {
               PrimaryButton(
                 text: 'SIMPAN CADANGAN KE FILE',
                 isLoading: _membuat,
-                onPressed: _membuat ? null : () => _cadangkan(bagikan: false),
+                onPressed: _membuat ? null : () => _cadangkan(),
+              ),
+              const SizedBox(height: 10),
+              SecondaryButton(
+                text: 'SIMPAN KE FLASHDISK',
+                icon: Icons.usb_rounded,
+                onPressed: _membuat ? null : () => _cadangkan(flashdisk: true),
               ),
               const SizedBox(height: 10),
               SecondaryButton(

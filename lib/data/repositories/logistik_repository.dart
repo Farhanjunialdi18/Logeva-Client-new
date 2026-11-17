@@ -20,6 +20,7 @@ import '../database_tables.dart';
 import '../local_database.dart';
 import '../table_store.dart';
 import 'barang_repository.dart';
+import 'pengaturan_repository.dart';
 
 /// Catatan ditolak; [message] siap ditampilkan.
 class LogistikException implements Exception {
@@ -137,6 +138,7 @@ class LogistikRepository {
       throw const LogistikException('Sumber bantuan wajib diisi.');
     }
     await _store.insert(DatabaseTables.barangMasuk, data.toMap());
+    await PengaturanRepository.withStore(_store).tambahPerubahanLokal();
     DataEvents.instance.notifyChanged();
   }
 
@@ -159,6 +161,7 @@ class LogistikRepository {
           : 'Stok barang ini sudah habis.');
     }
     await _store.insert(DatabaseTables.barangKeluar, data.toMap());
+    await PengaturanRepository.withStore(_store).tambahPerubahanLokal();
     DataEvents.instance.notifyChanged();
   }
 

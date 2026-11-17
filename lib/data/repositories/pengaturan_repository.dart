@@ -6,6 +6,7 @@
 
 import '../../utils/kode_unik.dart';
 import '../../utils/pin_hasher.dart';
+import '../../utils/waktu_wib.dart';
 import '../database_tables.dart';
 import '../local_database.dart';
 import '../table_store.dart';
@@ -105,6 +106,57 @@ class PengaturanRepository {
     assert(peran == peranInduk || peran == peranAnggota);
     await set(kunciPeranPerangkat, peran);
   }
+
+  // ---------------- STATUS KIRIM KE HP INDUK (HP Anggota) ----------------
+  // Supaya relawan tahu ada catatan yang belum dikirim ke admin, dan apakah
+  // admin sudah menggabungkan kirimannya.
+
+  /// Jumlah perubahan yang DICATAT DI HP INI (tambah/ubah/hapus pengungsi,
+  /// barang masuk/keluar) sejak terakhir dikirim. Data dari HP lain yang
+  /// digabung tidak dihitung (gabung menulis langsung, bukan lewat repository).
+  static const String kunciBelumTerkirim = 'perubahan_belum_terkirim';
+
+  /// Waktu (WIB, format paket) File Sinkron terakhir dikirim dari HP ini.
+  static const String kunciTerakhirKirim = 'terakhir_kirim_induk';
+
+  /// Waktu kiriman HP ini yang terakhir SUDAH DIGABUNG di HP Induk (dari
+  /// tanda terima di file balasan HP Induk).
+  static const String kunciDiterimaInduk = 'diterima_induk';
+
+  Future<void> tambahPerubahanLokal([int jumlah = 1]) async {
+    final lama = int.tryParse(await get(kunciBelumTerkirim) ?? '') ?? 0;
+    await set(kunciBelumTerkirim, '${lama + jumlah}');
+  }
+
+  Future<int> perubahanBelumTerkirim() async =>
+      int.tryParse(await get(kunciBelumTerkirim) ?? '') ?? 0;
+
+  /// Dipanggil setelah File Sinkron [waktu] dikirim ke HP Induk.
+  Future<void> tandaiTerkirim(String waktu) async {
+    await set(kunciBelumTerkirim, '0');
+    await set(kunciTerakhirKirim, waktu);
+  }
+
+  // ---------------- STATUS HP RELAWAN (HP Induk) ----------------
+  // Pengingat untuk admin: HP relawan mana yang belum mengirim data, dan
+  // mana yang perlu DIBAGIKAN ULANG (akun berubah / ada data gabungan baru).
+
+  /// Waktu (WIB) akun relawan/admin terakhir diubah di HP ini (tambah, edit,
+  /// PIN baru, nonaktif, hapus). Perubahan ini baru berlaku di HP relawan
+  /// setelah dibagikan ulang.
+  static const String kunciAkunBerubah = 'akun_berubah_pada';
+
+  /// Waktu (WIB) HP Induk terakhir menggabungkan data dari HP lain.
+  static const String kunciTerakhirGabung = 'terakhir_gabung_pada';
+
+  /// + kode perangkat HP Anggota: laporan dari file kiriman HP itu (JSON).
+  static const String awalanHpAnggota = 'hp_anggota_';
+
+  /// + kode relawan: waktu (WIB) file terakhir DIBAGIKAN admin ke relawan itu.
+  static const String awalanDibagikan = 'dibagikan_ke_';
+
+  Future<void> tandaiAkunBerubah() =>
+      set(kunciAkunBerubah, WaktuWib.tanggalWaktu(DateTime.now()));
 
   // ---------------- KATA SANDI POSKO ----------------
   // Mengunci Paket Data Posko & Cadangan (berkas_terkunci.dart). Dibuat

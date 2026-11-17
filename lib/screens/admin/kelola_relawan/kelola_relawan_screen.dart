@@ -22,6 +22,8 @@ import '../../../widgets/search_field.dart';
 import '../../../widgets/summary_card.dart';
 import '../../../services/perangkat_service.dart';
 import '../../../widgets/dikelola_induk_banner.dart';
+import '../../../services/sinkron_service.dart';
+import '../../../widgets/status_hp_relawan.dart';
 import 'relawan_akun_detail_screen.dart';
 import 'relawan_akun_form_screen.dart';
 
@@ -66,13 +68,21 @@ class _KelolaRelawanScreenState extends State<KelolaRelawanScreen> {
     }.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
+    final status = PerangkatService.isAnggota
+        ? const <String, StatusHpRelawan>{}
+        : await SinkronService.statusHpRelawan();
+
     if (!mounted) return;
     setState(() {
       _semua = relawan;
       _daftarPosko = posko;
+      _statusHp = status;
       _loading = false;
     });
   }
+
+  /// Status HP setiap relawan (kode relawan -> status), HP Induk saja.
+  Map<String, StatusHpRelawan> _statusHp = const {};
 
   List<Relawan> get _hasilFilter {
     final q = _kataCari.trim().toLowerCase();
@@ -129,8 +139,10 @@ class _KelolaRelawanScreenState extends State<KelolaRelawanScreen> {
 
           if (PerangkatService.isAnggota)
             const DikelolaIndukBanner()
-          else
+          else ...[
+            const PengingatHpRelawanBanner(),
             PrimaryButton(text: '+ TAMBAH RELAWAN', onPressed: _tambah),
+          ],
           const SizedBox(height: 14),
 
           SearchField(
@@ -168,6 +180,9 @@ class _KelolaRelawanScreenState extends State<KelolaRelawanScreen> {
                   relawan.poskoLabel,
                   'PIN: ••••••',
                   'Akun dibuat ${DateFormatter.lamaSejak(relawan.dibuatPada)}',
+                  if (!PerangkatService.isAnggota && relawan.sudahDitempatkan)
+                    StatusHpRelawanTeks.ringkas(
+                        SinkronService.statusUntuk(_statusHp, relawan.kode)),
                 ],
                 aktif: relawan.isAktif,
                 onTap: () => _bukaDetail(relawan),

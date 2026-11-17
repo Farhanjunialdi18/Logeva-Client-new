@@ -17,6 +17,7 @@ import '../../../theme/app_text_styles.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/data_table_card.dart';
 import '../../../widgets/filter_pengungsi.dart';
+import '../../../widgets/kirim_ke_admin_button.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/search_field.dart';
@@ -115,6 +116,7 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
 
           PrimaryButton(text: '+ TAMBAH PENGUNGSI', onPressed: _tambah),
           const SizedBox(height: 14),
+          const KirimKeAdminButton(),
 
           SearchField(
             hint: 'Cari nama pengungsi...',

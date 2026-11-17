@@ -28,6 +28,7 @@ import '../../../services/perangkat_service.dart';
 import '../../dashboard/dashboard_screen.dart';
 import '../info/info_posko_screen.dart';
 import '../../ringkasan/ringkasan_posko_screen.dart';
+import '../../../widgets/status_kirim_card.dart';
 
 class BerandaScreen extends StatefulWidget {
   /// Dipanggil saat kartu menu diketuk (1=Pengungsi, 2=Logistik, 3=Riwayat).
@@ -186,6 +187,12 @@ class _BerandaScreenState extends State<BerandaScreen> {
                   ),
                 ),
               ),
+            const SizedBox(height: 16),
+          ],
+
+          // ---- Status kirim ke admin (HP Anggota) ----
+          if (PerangkatService.isAnggota) ...[
+            const StatusKirimCard(),
             const SizedBox(height: 16),
           ],
 

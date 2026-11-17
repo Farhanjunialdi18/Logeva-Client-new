@@ -426,12 +426,13 @@ class PaketDataService {
       {bool keFlashdisk = false}) async {
     try {
       final berkas = await berkasTerkunci(paket);
-      final saved = await FileService.saveBytes(
-        paket.namaFile,
-        berkas,
-        dialogTitle: 'Simpan Paket Data Posko',
-        pilihLokasi: keFlashdisk,
-      );
+      final saved = keFlashdisk
+          ? await FileService.simpanKeFlashdisk(paket.namaFile, berkas)
+          : await FileService.saveBytes(
+              paket.namaFile,
+              berkas,
+              dialogTitle: 'Simpan Paket Data Posko',
+            );
       if (!saved) {
         return const TransferResult(
             TransferStatus.cancelled, 'Ekspor dibatalkan.');
@@ -452,14 +453,20 @@ class PaketDataService {
         TransferStatus.success,
         'Paket ${paket.namaFile} tersimpan dan dikunci kata sandi posko.'
         '${FileService.lokasiTerakhir == null ? '' : '\nLokasi: ${FileService.lokasiTerakhir}'}\n\n'
-        '${FileService.lokasiTerakhir == null ? '' : 'Sambungkan HP ke laptop '
-            'dengan kabel USB (pilih "Transfer file"), buka folder '
-            'Download/LOGEVA, lalu salin file ini ke laptop / flashdisk.\n\n'}'
+        '${FileService.lokasiTerakhir == null ? '' : keFlashdisk
+            ? 'File sudah ada di folder LOGEVA di flashdisk. Cabut flashdisk, '
+                'lalu bawa ke pusat.\n\n'
+            : 'Sambungkan HP ke laptop dengan kabel USB (pilih "Transfer '
+                'file"), buka folder Download/LOGEVA, lalu salin file ini ke '
+                'laptop.\n\n'}'
         'Di pusat, impor file ini di website LOGEVA menu Import Paket Posko '
         '(pusat mengetik kata sandi posko saat impor pertama). Hapus file dari '
         'HP & flashdisk setelah diimpor karena berisi data pribadi.',
       );
     } on StateError catch (e) {
+      return TransferResult(TransferStatus.failed, e.message);
+    } on FileServiceException catch (e) {
+      // misal flashdisk belum dicolok: cukup diberi tahu, tidak dicatat gagal
       return TransferResult(TransferStatus.failed, e.message);
     } catch (e) {
       await RiwayatRepository.instance.log(

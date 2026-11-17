@@ -32,6 +32,7 @@ import '../../../widgets/theme_toggle_button.dart';
 import '../../dashboard/dashboard_screen.dart';
 import '../../ringkasan/ringkasan_posko_screen.dart';
 import '../data/admin_data_menu_screen.dart';
+import '../../../widgets/status_hp_relawan.dart';
 
 class AdminBerandaScreen extends StatefulWidget {
   /// Pindah tab (1=Admin, 2=Relawan, 3=Data, 4=Settings).
@@ -244,6 +245,9 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
             ],
             const SizedBox(height: 12),
           ],
+
+          // ---- Pengingat HP relawan (HP Induk) ----
+          PengingatHpRelawanBanner(onTap: () => widget.onOpenTab(_tabRelawan)),
 
           // ---- Aksi cepat ----
           Text('AKSI CEPAT', style: AppTextStyles.label(p)),

@@ -131,6 +131,7 @@ class RelawanRepository {
       diubahPada: now,
     );
     final id = await _store.insert(_table, data.toMap());
+    await PengaturanRepository.withStore(_store).tandaiAkunBerubah();
     DataEvents.instance.notifyChanged();
     return data.copyWith(id: id);
   }
@@ -143,6 +144,7 @@ class RelawanRepository {
     if (data.pin.isNotEmpty) {
       data = data.copyWith(pinHash: PinHasher.hash(data.pin, await _salt()));
     }
+    await PengaturanRepository.withStore(_store).tandaiAkunBerubah();
     await _simpan(data);
   }
 
@@ -160,6 +162,7 @@ class RelawanRepository {
 
   Future<void> delete(int id) async {
     await _store.delete(_table, id);
+    await PengaturanRepository.withStore(_store).tandaiAkunBerubah();
     DataEvents.instance.notifyChanged();
   }
 }

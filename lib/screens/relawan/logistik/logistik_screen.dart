@@ -12,6 +12,7 @@ import '../../../models/posko.dart';
 import '../../../services/session_service.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/empty_state.dart';
+import '../../../widgets/kirim_ke_admin_button.dart';
 import '../../../widgets/page_header.dart';
 import 'logistik_posko_panel.dart';
 
@@ -76,8 +77,10 @@ class _LogistikScreenState extends State<LogistikScreen> {
               icon: Icons.home_work_outlined,
               message: 'Akun belum ditempatkan di posko. Hubungi admin.',
             )
-          else
+          else ...[
+            const KirimKeAdminButton(),
             LogistikPoskoPanel(posko: posko),
+          ],
           const SizedBox(height: 16),
         ],
       ),

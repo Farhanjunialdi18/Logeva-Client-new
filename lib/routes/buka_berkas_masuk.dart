@@ -13,14 +13,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/repositories/admin_repository.dart';
+import '../data/repositories/relawan_repository.dart';
 import '../screens/admin/paket/paket_data_screen.dart';
 import '../screens/cadangan/cadangan_screen.dart';
-import '../screens/sinkron/sinkron_screen.dart';
 import '../services/berkas_masuk_service.dart';
 import '../services/kunci_otomatis.dart';
 import '../services/session_service.dart';
 import '../services/sinkron_service.dart';
 import '../utils/app_snackbar.dart';
+import '../widgets/sinkron_otomatis.dart';
 import 'app_routes.dart';
 
 class BukaBerkasMasuk {
@@ -85,16 +86,25 @@ class BukaBerkasMasuk {
 
     switch (jenis) {
       case JenisBerkas.penyiapan:
-        nav.pushNamed(AppRoutes.terimaPenyiapan);
+        await _penyiapan();
       case JenisBerkas.sinkron:
         if (!adminSiap && !relawan && await _siapkanDariFile()) {
           // File dari HP Induk di HP relawan yang belum login / masih baru:
-          // siapkan akun + gabung data sekaligus, lalu login PIN.
-          nav.pushNamed(AppRoutes.terimaPenyiapan);
+          // tanya "Sinkronkan data?" -> akun + data posko -> login PIN.
+          await _penyiapan();
         } else if (adminSiap || relawan) {
-          buka(const SinkronScreen());
+          final berkas = BerkasMasukService.ambil(JenisBerkas.sinkron);
+          final ctx = _ctx;
+          if (berkas != null && ctx != null && ctx.mounted) {
+            final ok =
+                await SinkronOtomatis.sinkron(ctx, berkas.bytes, namaFile: berkas.name);
+            if (ok) await periksaAkunRelawan();
+          }
         } else if (belumLogin) {
           _pesan('File sinkron diterima. Login dulu, file langsung dibuka setelah login.');
+        } else {
+          _pesan('File sinkron diterima. Ganti dulu password bawaan admin, file '
+              'langsung dibuka setelahnya.');
         }
       case JenisBerkas.cadangan:
         if (adminSiap) {
@@ -127,6 +137,39 @@ class BukaBerkasMasuk {
         _pesan('File ini bukan file LOGEVA (Penyiapan, Sinkron, Cadangan, atau '
             'Paket dari website).', error: true);
     }
+  }
+
+  /// Setelah akun diperbarui dari HP Induk: relawan yang sedang login tapi
+  /// akunnya sudah DINONAKTIFKAN / DIHAPUS admin langsung dikeluarkan.
+  static Future<void> periksaAkunRelawan() async {
+    final sesi = SessionService.instance.relawan;
+    final id = sesi?.relawanId;
+    if (sesi == null || id == null) return;
+    final akun = await RelawanRepository.instance.findById(id);
+    if (akun != null && akun.isAktif) return;
+    SessionService.instance.clear();
+    final nav = KunciOtomatis.instance.navigatorKey.currentState;
+    nav?.pushNamedAndRemoveUntil(AppRoutes.roleSelection, (_) => false);
+    _pesan(
+        akun == null
+            ? 'Akun ${sesi.nama} sudah dihapus admin. Anda dikeluarkan dari aplikasi.'
+            : 'Akun ${sesi.nama} sudah dinonaktifkan admin. Anda dikeluarkan dari aplikasi.',
+        error: true);
+  }
+
+  /// "Sinkronkan data?" untuk file dari HP Induk; kalau selesai, sesi lama
+  /// ditutup dan relawan langsung ke halaman login PIN.
+  static Future<void> _penyiapan() async {
+    final berkas = BerkasMasukService.ambil(JenisBerkas.penyiapan);
+    final ctx = _ctx;
+    if (berkas == null || ctx == null) return;
+    final siap = await SinkronOtomatis.penyiapan(ctx, berkas.bytes);
+    if (!siap) return;
+    SessionService.instance.clear();
+    final nav = KunciOtomatis.instance.navigatorKey.currentState;
+    if (nav == null) return;
+    nav.pushNamedAndRemoveUntil(AppRoutes.roleSelection, (_) => false);
+    nav.pushNamed(AppRoutes.relawanLogin);
   }
 
   /// File sinkron dari HP Induk yang bisa menyiapkan HP ini (HP baru atau

@@ -12,6 +12,7 @@ import '../data_events.dart';
 import '../database_tables.dart';
 import '../local_database.dart';
 import '../table_store.dart';
+import 'pengaturan_repository.dart';
 import 'posko_repository.dart';
 
 class PengungsiRepository {
@@ -71,19 +72,26 @@ class PengungsiRepository {
 
   // ---------------- SIMPAN DATA ----------------
 
+  /// Perubahan di HP ini yang belum dikirim ke HP Induk (status kirim relawan).
+  Future<void> _catatPerubahan(int jumlah) =>
+      PengaturanRepository.withStore(_store).tambahPerubahanLokal(jumlah);
+
   Future<void> add(Pengungsi data) async {
     await _store.insert(_table, data.toMap());
+    await _catatPerubahan(1);
     DataEvents.instance.notifyChanged();
   }
 
   Future<void> addMany(List<Pengungsi> list) async {
     await _store.insertMany(_table, list.map((e) => e.toMap()).toList());
+    await _catatPerubahan(list.length);
     DataEvents.instance.notifyChanged();
   }
 
   Future<void> update(Pengungsi data) async {
     if (data.id == null) return;
     await _store.update(_table, data.id!, data.toMap());
+    await _catatPerubahan(1);
     DataEvents.instance.notifyChanged();
   }
 
@@ -101,6 +109,7 @@ class PengungsiRepository {
     if (baru.isNotEmpty) {
       await _store.insertMany(_table, baru.map((e) => e.toMap()).toList());
     }
+    await _catatPerubahan(list.length);
     DataEvents.instance.notifyChanged();
   }
 
@@ -108,6 +117,7 @@ class PengungsiRepository {
   Future<void> hapus(Pengungsi data) async {
     if (data.id == null) return;
     await _store.update(_table, data.id!, data.tandaiDihapus().toMap());
+    await _catatPerubahan(1);
     DataEvents.instance.notifyChanged();
   }
 }
