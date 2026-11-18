@@ -298,18 +298,44 @@ class SinkronOtomatis {
       }
     }
 
+    // Cadangan butuh kata sandi posko. HP yang hanya dipakai mencoba (belum
+    // pernah diatur kata sandinya) tetap bisa dikosongkan: tanpa data
+    // pengungsi/logistik langsung, ada data = konfirmasi sekali lagi.
+    final adaKataSandi =
+        (await PengaturanRepository.instance.kataSandiBerkas()).isNotEmpty;
+    if (!adaKataSandi) {
+      final adaData = isi.pengungsi + isi.logistik > 0;
+      if (adaData) {
+        if (!context.mounted) return false;
+        final tetap = await ConfirmDialog.show(
+          context,
+          title: 'Kosongkan tanpa cadangan?',
+          message: 'Kata sandi posko belum pernah diatur di HP ini, jadi cadangan '
+              'tidak bisa dibuat. ${isi.pengungsi} pengungsi dan ${isi.logistik} '
+              'catatan logistik di HP ini akan HILANG.\n\nLanjutkan hanya kalau '
+              'data itu data uji coba / sudah tidak dipakai.',
+          confirmText: 'HAPUS & SIAPKAN',
+          cancelText: 'BATAL',
+        );
+        if (!tetap) return false;
+      }
+    }
+
     try {
-      final (nama, bytes) = await CadanganService.buat();
-      final tersimpan = await FileService.saveBytes(nama, bytes,
-          dialogTitle: 'Simpan cadangan sebelum dikosongkan');
-      if (!tersimpan) return false;
+      String pesan = 'HP dikosongkan.';
+      if (adaKataSandi) {
+        final (nama, bytes) = await CadanganService.buat();
+        final tersimpan = await FileService.saveBytes(nama, bytes,
+            dialogTitle: 'Simpan cadangan sebelum dikosongkan');
+        if (!tersimpan) return false;
+        pesan = 'HP dikosongkan. ${FileService.pesanTersimpan(nama)}';
+      }
       await PenyiapanService.kosongkan();
       PengaturanRepository.instance.lupakanCache();
       await PerangkatService.muat();
       sesi.clear();
       if (context.mounted) {
-        AppSnackbar.show(context, 'HP dikosongkan. ${FileService.pesanTersimpan(nama)}',
-            duration: const Duration(seconds: 6));
+        AppSnackbar.show(context, pesan, duration: const Duration(seconds: 6));
       }
       return true;
     } catch (e) {

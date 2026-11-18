@@ -454,8 +454,9 @@ class PaketDataService {
         'Paket ${paket.namaFile} tersimpan dan dikunci kata sandi posko.'
         '${FileService.lokasiTerakhir == null ? '' : '\nLokasi: ${FileService.lokasiTerakhir}'}\n\n'
         '${FileService.lokasiTerakhir == null ? '' : keFlashdisk
-            ? 'File sudah ada di folder LOGEVA di flashdisk. Cabut flashdisk, '
-                'lalu bawa ke pusat.\n\n'
+            ? 'File sudah ada di folder LOGEVA di flashdisk. Tunggu beberapa '
+                'detik (atau ketuk "Keluarkan" di notifikasi USB) sebelum '
+                'mencabut flashdisk, supaya file tidak rusak, lalu bawa ke pusat.\n\n'
             : 'Sambungkan HP ke laptop dengan kabel USB (pilih "Transfer '
                 'file"), buka folder Download/LOGEVA, lalu salin file ini ke '
                 'laptop.\n\n'}'
