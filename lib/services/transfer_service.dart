@@ -38,28 +38,13 @@ class TransferService {
   static Future<TransferResult> exportPengungsi(Posko posko) async {
     // Hanya yang masih di posko (template website tidak punya kolom status).
     final list = await PengungsiRepository.instance.getDiPosko(poskoId: posko.id);
-    final tanpaLahir = list.where((e) => e.perluDilengkapi).length;
-    final tanpaKk = list.where((e) => e.nomorKk.isEmpty).length;
-
-    final hasil = await _export<Pengungsi>(
+    // Tanggal lahir / nomor KK kosong tetap diterima website (usia terisi).
+    return _export<Pengungsi>(
       jenisData: _labelPengungsi,
       filePrefix: 'LOGEVA_pengungsi_${_namaFile(posko.nama)}',
       headers: PengungsiCsv.headers,
       load: () async => list,
       toRow: PengungsiCsv.toRow,
-    );
-    if (hasil.status != TransferStatus.success) return hasil;
-
-    final catatan = [
-      if (tanpaLahir > 0) '$tanpaLahir tanpa tanggal lahir',
-      if (tanpaKk > 0) '$tanpaKk tanpa nomor KK',
-    ];
-    if (catatan.isEmpty) return hasil;
-    return TransferResult(
-      TransferStatus.success,
-      '${hasil.message}\n\nPerhatian: ${catatan.join(' dan ')}. Import '
-      'Pengungsi di website menolak baris seperti ini; lengkapi datanya '
-      'atau kirim lewat Paket Data Posko.',
     );
   }
 
@@ -79,7 +64,7 @@ class TransferService {
 
       final lama = {
         for (final e in await PengungsiRepository.instance.getByPosko(posko.id))
-          if (e.kunci != null) e.kunci!: e,
+          e.kunci: e,
       };
 
       final error = <String>[];

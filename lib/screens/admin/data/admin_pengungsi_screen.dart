@@ -229,7 +229,7 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
                 AccountTile(
                   icon: Icons.groups_rounded,
                   iconColor: AppColors.accentPurple,
-                  title: e.perluDilengkapi ? '⚠ ${e.nama}' : e.nama,
+                  title: e.nama,
                   lines: [
                     '${e.jenisKelamin} • ${e.usia} tahun'
                         '${e.isRentan ? ' • ${e.kelompokRentan}' : ''}',

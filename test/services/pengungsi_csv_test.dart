@@ -49,8 +49,14 @@ void main() {
         '3602011203580001');
   });
 
-  test('tanggal lahir wajib & harus masuk akal', () {
-    expect(baca({'Tanggal Lahir': ''}).error, contains('Tanggal lahir kosong'));
+  test('tanggal lahir ATAU usia wajib; tanggal harus masuk akal', () {
+    expect(baca({'Tanggal Lahir': '', 'Usia': ''}).error,
+        contains('Isi tanggal lahir atau usia'));
+    final hanyaUsia = baca({'Tanggal Lahir': '', 'Usia': '45'});
+    expect(hanyaUsia.error, isEmpty);
+    expect(hanyaUsia.usia, 45);
+    expect(hanyaUsia.keBaru(1, 'x').usia, 45);
+    expect(hanyaUsia.keBaru(1, 'x').tanggalLahir, isNull);
     expect(baca({'Tanggal Lahir': '12 Maret 1958'}).error.single,
         contains('tidak dikenali'));
     expect(baca({'Tanggal Lahir': '2027-01-01', 'Usia': ''}).error.single,
@@ -156,5 +162,19 @@ void main() {
       expect(Tanggal.baca('1990-07-05 00:00:00'), DateTime(1990, 7, 5));
       expect(Tanggal.baca('1990-7-5'), isNull, reason: 'harus 2 digit');
     });
+  });
+
+  test('ekspor -> impor CSV: usia saja tetap usia saja', () {
+    final asli = Pengungsi.baru(poskoId: 1, nama: 'Mak Inah', asal: 'Cikaret',
+        usia: 72, jenisKelamin: DataOptions.perempuan);
+    final baris = Map.fromIterables(
+        PengungsiCsv.headers.map((h) => h.toLowerCase().replaceAll(' ', '_')),
+        PengungsiCsv.toRow(asli));
+    final dibaca = PengungsiCsv.baca(baris);
+    expect(dibaca.error, isEmpty);
+    expect(dibaca.kunci, asli.kunci, reason: 'impor ulang = orang yang sama');
+    final baru = dibaca.keBaru(1, 'x');
+    expect(baru.tanggalLahir, isNull);
+    expect(baru.usia, 72);
   });
 }

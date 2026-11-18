@@ -1,9 +1,11 @@
 // ============================================================
 // ganti_password_wajib_screen.dart
-// WAJIB GANTI PASSWORD: tampil setelah admin login dengan password
-// bawaan (admin123). Semua HP memasang akun bawaan yang sama, jadi
-// tanpa langkah ini siapa pun yang memegang HP bisa menjadi admin.
-// Halaman ini tidak bisa dilewati: pilihannya ganti password atau keluar.
+// LENGKAPI AKUN ADMIN POSKO: tampil setelah admin login kalau
+//  - password masih bawaan (admin123): semua HP memasang akun bawaan yang
+//    sama, jadi tanpa langkah ini siapa pun bisa menjadi admin;
+//  - nama masih bawaan ("Admin GMLS"): nama ini dikirim ke website sebagai
+//    ADMIN POSKO (penanggung jawab) di laporan, jadi wajib nama asli.
+// Halaman ini tidak bisa dilewati: pilihannya lengkapi akun atau keluar.
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -31,13 +33,29 @@ class GantiPasswordWajibScreen extends StatefulWidget {
 
 class _GantiPasswordWajibScreenState extends State<GantiPasswordWajibScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nama = TextEditingController();
   final _baru = TextEditingController();
   final _konfirmasi = TextEditingController();
   bool _sembunyikan = true;
   bool _saving = false;
 
+  /// Password masih bawaan = kolom password ditampilkan.
+  bool _gantiPassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final admin = SessionService.instance.admin;
+    if (admin != null) {
+      final repo = AdminRepository.instance;
+      _gantiPassword = repo.masihPasswordBawaan(admin);
+      if (!repo.masihNamaBawaan(admin)) _nama.text = admin.nama;
+    }
+  }
+
   @override
   void dispose() {
+    _nama.dispose();
     _baru.dispose();
     _konfirmasi.dispose();
     super.dispose();
@@ -56,18 +74,25 @@ class _GantiPasswordWajibScreenState extends State<GantiPasswordWajibScreen> {
       return;
     }
 
-    final error = await AdminRepository.instance.gantiPassword(admin, _baru.text);
-    if (!mounted) return;
-    if (error != null) {
-      setState(() => _saving = false);
-      AppSnackbar.show(context, error, isError: true);
-      return;
+    final repo = AdminRepository.instance;
+    var data = admin.copyWith(nama: _nama.text.trim());
+    if (_gantiPassword) {
+      // Cek password lama = baru dulu, sebelum apa pun disimpan.
+      final error = await repo.gantiPassword(data, _baru.text);
+      if (!mounted) return;
+      if (error != null) {
+        setState(() => _saving = false);
+        AppSnackbar.show(context, error, isError: true);
+        return;
+      }
+    } else {
+      await repo.update(data);
     }
 
-    final terbaru = await AdminRepository.instance.findById(admin.id!);
+    final terbaru = await repo.findById(admin.id!);
     if (terbaru != null) SessionService.instance.startAdmin(terbaru);
     if (!mounted) return;
-    AppSnackbar.show(context, 'Password berhasil diganti.');
+    AppSnackbar.show(context, 'Akun admin posko sudah lengkap.');
     Navigator.pushNamedAndRemoveUntil(
         context, AppRoutes.adminDashboard, (route) => false);
   }
@@ -81,7 +106,7 @@ class _GantiPasswordWajibScreenState extends State<GantiPasswordWajibScreen> {
   @override
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
-    final nama = SessionService.instance.admin?.username ?? 'admin';
+    final username = SessionService.instance.admin?.username ?? 'admin';
 
     return PopScope(
       canPop: false, // tombol back tidak bisa melewati halaman ini
@@ -96,15 +121,34 @@ class _GantiPasswordWajibScreenState extends State<GantiPasswordWajibScreen> {
                 const Icon(Icons.lock_reset_rounded,
                     size: 48, color: AppColors.primary),
                 const SizedBox(height: 16),
-                Text('GANTI PASSWORD DULU', style: AppTextStyles.pageTitle(p)),
+                Text('LENGKAPI AKUN ADMIN POSKO', style: AppTextStyles.pageTitle(p)),
                 const SizedBox(height: 8),
                 Text(
-                  'Akun "$nama" masih memakai password bawaan. Password ini '
-                  'sama di semua HP, jadi siapa pun bisa masuk sebagai admin. '
-                  'Buat password baru sebelum memakai aplikasi.',
+                  'Isi nama asli Anda: nama ini tercatat sebagai ADMIN POSKO '
+                  '(penanggung jawab) di laporan website.'
+                  '${_gantiPassword ? ' Akun "$username" juga masih memakai password '
+                      'bawaan yang sama di semua HP, jadi buat password baru.' : ''}',
                   style: AppTextStyles.body(p),
                 ),
                 const SizedBox(height: 24),
+
+                AppTextField(
+                  label: 'Nama Lengkap Admin Posko',
+                  isRequired: true,
+                  hint: 'Contoh: Budi Santoso',
+                  controller: _nama,
+                  textCapitalization: TextCapitalization.words,
+                  validator: (v) {
+                    final t = (v ?? '').trim();
+                    if (t.isEmpty) return 'Nama wajib diisi.';
+                    if (t.toLowerCase() == AdminRepository.defaultNama.toLowerCase()) {
+                      return 'Ganti dengan nama asli Anda.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                if (_gantiPassword) ...[
 
                 AppTextField(
                   label: 'Password Baru',
@@ -143,10 +187,11 @@ class _GantiPasswordWajibScreenState extends State<GantiPasswordWajibScreen> {
                   'ini (Super Admin) bisa menggantinya di menu Kelola Admin.',
                   style: AppTextStyles.small(p),
                 ),
+                ],
                 const SizedBox(height: 24),
 
                 PrimaryButton(
-                  text: 'SIMPAN PASSWORD',
+                  text: 'SIMPAN',
                   isLoading: _saving,
                   onPressed: _simpan,
                 ),

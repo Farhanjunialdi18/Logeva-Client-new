@@ -66,6 +66,18 @@ void main() {
       expect(repo.masihPasswordBawaan(baru), isFalse);
     });
 
+    test('nama bawaan "Admin GMLS" juga wajib diganti nama admin posko', () async {
+      final admin = (await repo.getAll()).single;
+      expect(await repo.gantiPassword(admin, 'posko2026'), isNull);
+      var a = (await repo.getAll()).single;
+      expect(repo.masihNamaBawaan(a), isTrue);
+      expect(repo.perluDilengkapi(a), isTrue, reason: 'password sudah, nama belum');
+
+      await repo.update(a.copyWith(nama: 'Budi Santoso'));
+      a = (await repo.getAll()).single;
+      expect(repo.perluDilengkapi(a), isFalse);
+    });
+
     test('password lama salah / sama dengan lama ditolak', () async {
       final admin = (await repo.getAll()).single;
       expect(await repo.gantiPassword(admin, 'posko2026', lama: 'salah'),

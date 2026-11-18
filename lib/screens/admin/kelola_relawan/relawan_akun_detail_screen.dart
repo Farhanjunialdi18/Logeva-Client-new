@@ -11,6 +11,8 @@ import '../../../core/data_options.dart';
 import '../../../data/data_events.dart';
 import '../../../data/repositories/posko_repository.dart';
 import '../../../data/repositories/relawan_repository.dart';
+import '../../../data/repositories/riwayat_repository.dart';
+import '../../../models/riwayat_transaksi.dart';
 import '../../../models/relawan.dart';
 import '../../../services/file_service.dart';
 import '../../../services/penyiapan_service.dart';
@@ -146,6 +148,12 @@ class _RelawanAkunDetailScreenState extends State<RelawanAkunDetailScreen> {
       if (terkirim) {
         // Pengingat "perlu dibagikan ulang" untuk relawan ini hilang.
         await SinkronService.tandaiDibagikan(relawan.kode, waktu);
+        await RiwayatRepository.instance.log(
+          jenis: RiwayatTransaksi.jenisExport,
+          jenisData: 'Sinkron Antar-HP',
+          berhasil: true,
+          keterangan: 'Dikirim ke HP ${relawan.nama}: ${SinkronService.teksIsi(bytes)} · $nama',
+        );
         DataEvents.instance.notifyChanged();
       }
       if (!mounted) return;

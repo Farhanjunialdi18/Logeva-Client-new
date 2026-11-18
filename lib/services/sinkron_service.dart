@@ -244,6 +244,16 @@ class SinkronService {
 
   /// Jumlah data posko di dalam file dari HP Induk (untuk pratinjau di HP
   /// yang belum disiapkan). null = file tidak membawa data posko.
+  /// Isi file untuk LOG SETOR DATA, misal "12 pengungsi, 3 barang masuk,
+  /// 1 barang keluar". Kosong kalau file tidak berisi data posko.
+  static String teksIsi(List<int> bytes) {
+    final isi = ringkasanIsi(bytes);
+    return isi == null
+        ? ''
+        : '${isi.pengungsi} pengungsi, ${isi.masuk} barang masuk, '
+            '${isi.keluar} barang keluar';
+  }
+
   static ({int pengungsi, int masuk, int keluar})? ringkasanIsi(List<int> bytes) {
     try {
       final arsip = ZipDecoder().decodeBytes(bytes);

@@ -23,6 +23,7 @@ import 'package:flutter_application_1/screens/admin/data/admin_logistik_screen.d
 import 'package:flutter_application_1/screens/admin/data/admin_pengungsi_screen.dart';
 import 'package:flutter_application_1/screens/admin/kelola_relawan/relawan_akun_detail_screen.dart';
 import 'package:flutter_application_1/screens/admin/paket/paket_data_screen.dart';
+import 'package:flutter_application_1/screens/sinkron/log_setor_screen.dart';
 import 'package:flutter_application_1/screens/admin/posko/kelola_posko_screen.dart';
 import 'package:flutter_application_1/screens/admin/posko/posko_detail_screen.dart';
 import 'package:flutter_application_1/screens/admin/posko/posko_form_screen.dart';
@@ -202,6 +203,8 @@ void main() {
       sebagaiAdmin: true);
   layar('Detail relawan', () async => const RelawanAkunDetailScreen(relawanId: 1),
       sebagaiAdmin: true);
+  layar('Log setor data (admin)', () async => const LogSetorScreen(), sebagaiAdmin: true);
+  layar('Log setor data (relawan)', () async => const LogSetorScreen(), hpAnggota: true);
 
   // ---------------- HP INDUK / ANGGOTA (Tahap B) ----------------
   layar('Layar awal', () async => const RoleSelectionScreen());

@@ -39,6 +39,8 @@ import '../../widgets/primary_button.dart';
 import '../../utils/waktu_wib.dart';
 import '../../widgets/status_kirim_card.dart';
 import '../admin/data/pengungsi_dobel_screen.dart';
+import '../../widgets/secondary_button.dart';
+import 'log_setor_screen.dart';
 
 class SinkronScreen extends StatefulWidget {
   /// Diisi saat dipakai sebagai tab relawan (HP Anggota); kosong = halaman biasa.
@@ -151,12 +153,13 @@ class _SinkronScreenState extends State<SinkronScreen> {
           jenis: RiwayatTransaksi.jenisExport,
           jenisData: _label,
           berhasil: true,
-          keterangan: _semuaData
-              ? nama
-              : '$nama (${[
+          // LOG SETOR DATA: arah, isi, dan nama file.
+          keterangan: '${_anggota ? 'Setor ke admin' : 'Dikirim ke HP relawan'}: '
+              '${SinkronService.teksIsi(bytes)}'
+              '${_semuaData ? '' : ' (${[
                   if (_pengungsiDikirim) 'pengungsi',
                   if (_logistikDikirim) 'logistik',
-                ].join(' & ')} saja)',
+                ].join(' & ')} saja)'} · $nama',
         );
       }
       if (!mounted || !ok) return;
@@ -260,7 +263,10 @@ class _SinkronScreenState extends State<SinkronScreen> {
         jenis: RiwayatTransaksi.jenisImport,
         jenisData: _label,
         berhasil: true,
-        keterangan: '${_namaFile ?? ''}: ${hasil.ringkasan}',
+        // LOG SETOR DATA: dari siapa & kapan file dibuat.
+        keterangan: 'Diterima dari '
+            '${(_pratinjau?.data.dieksporOleh ?? '').isEmpty ? 'HP lain' : _pratinjau!.data.dieksporOleh} '
+            '(dikirim ${_pratinjau?.data.dibuatPada ?? '-'} WIB) · ${hasil.ringkasan}',
       );
       DataEvents.instance.notifyChanged();
       final minus = <String>[];
@@ -493,6 +499,14 @@ class _SinkronScreenState extends State<SinkronScreen> {
             const SizedBox(height: 24),
 
             // ---- RIWAYAT ----
+            SecondaryButton(
+              text: 'LOG SETOR DATA',
+              icon: Icons.history_rounded,
+              height: 50,
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LogSetorScreen())),
+            ),
+            const SizedBox(height: 20),
             Text('TERAKHIR DITERIMA', style: AppTextStyles.label(p)),
             const SizedBox(height: 10),
             if (_riwayat.isEmpty)

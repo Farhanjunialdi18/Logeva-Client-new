@@ -182,7 +182,10 @@ class SinkronOtomatis {
                 jenis: RiwayatTransaksi.jenisImport,
                 jenisData: _label,
                 berhasil: true,
-                keterangan: '$namaFile: ${hasil.ringkasan}',
+                // LOG SETOR DATA: dari siapa & kapan file dibuat.
+                keterangan: 'Diterima dari '
+                    '${d.dieksporOleh.isEmpty ? 'HP lain' : d.dieksporOleh} '
+                    '(dikirim ${d.dibuatPada} WIB) · ${hasil.ringkasan}',
               );
               return hasil.ringkasan;
             } on GabungException catch (e) {

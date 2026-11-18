@@ -3,8 +3,10 @@
 // Bentuk data PENGUNGSI, mengikuti tabel `pengungsis` website.
 //
 // - [kode]        : kode unik (UUID) untuk Paket Data Posko, tidak berubah.
-// - [tanggalLahir]: wajib untuk data baru; null hanya pada data dari
-//                   versi lama aplikasi (ditandai "perlu dilengkapi").
+// - [tanggalLahir]: PILIH SALAH SATU: tanggal lahir ATAU usia (sama
+//                   dengan website). null = hanya usia yang diisi.
+// - [usia]        : dihitung dari tanggal lahir; kalau tanggal lahir
+//                   tidak diketahui, usia diisi langsung.
 // - [nomorKk]     : boleh kosong (dokumen bisa hilang saat bencana);
 //                   kalau diisi harus 16 digit.
 // - [dihapusPada] : data tidak dihapus permanen, hanya ditandai, supaya
@@ -63,13 +65,21 @@ class Pengungsi {
     this.keteranganKeluar = '',
   });
 
-  /// Pengungsi baru: kode unik & waktu dibuat otomatis,
-  /// usia dihitung dari tanggal lahir.
+  /// Usia: dari tanggal lahir kalau diisi, kalau tidak dari [usia].
+  static int hitungUsia(DateTime? tanggalLahir, int? usia) {
+    assert(tanggalLahir != null || usia != null,
+        'Isi tanggal lahir atau usia');
+    return tanggalLahir != null ? Tanggal.usia(tanggalLahir) : usia ?? 0;
+  }
+
+  /// Pengungsi baru: kode unik & waktu dibuat otomatis. Isi [tanggalLahir]
+  /// ATAU [usia] (usia dihitung otomatis kalau tanggal lahir diisi).
   factory Pengungsi.baru({
     required int? poskoId,
     required String nama,
     required String asal,
-    required DateTime tanggalLahir,
+    DateTime? tanggalLahir,
+    int? usia,
     required String jenisKelamin,
     String nomorKk = '',
     String kondisiKesehatan = '',
@@ -84,7 +94,7 @@ class Pengungsi {
       nama: nama,
       asal: asal,
       tanggalLahir: tanggalLahir,
-      usia: Tanggal.usia(tanggalLahir),
+      usia: hitungUsia(tanggalLahir, usia),
       jenisKelamin: jenisKelamin,
       nomorKk: nomorKk,
       kondisiKesehatan: _kondisi(kondisiKesehatan),
@@ -106,25 +116,31 @@ class Pengungsi {
   String get labelKeberadaan =>
       DataOptions.statusKeberadaan[statusKeberadaan] ?? statusKeberadaan;
 
-  /// Data versi lama tanpa tanggal lahir: wajib dilengkapi.
-  bool get perluDilengkapi => tanggalLahir == null;
+  /// Hanya usia yang diisi (tanggal lahir tidak diketahui).
+  bool get hanyaUsia => tanggalLahir == null;
+
+  static String _namaBaku(String nama) =>
+      nama.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
 
   /// Kunci ORANG YANG SAMA (aturan website): nama tanpa beda huruf
   /// besar/kecil & spasi ganda + tanggal lahir. Dibandingkan per posko.
   static String kunciSama(String nama, DateTime tanggalLahir) =>
-      '${nama.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase()}'
-      '|${Tanggal.format(tanggalLahir)}';
+      '${_namaBaku(nama)}|${Tanggal.format(tanggalLahir)}';
 
-  /// null kalau tanggal lahir belum diisi.
-  String? get kunci =>
-      tanggalLahir == null ? null : kunciSama(nama, tanggalLahir!);
+  /// Tanpa tanggal lahir: nama + usia (sama dengan website).
+  static String kunciUsia(String nama, int usia) => '${_namaBaku(nama)}|usia:$usia';
+
+  String get kunci => tanggalLahir == null
+      ? kunciUsia(nama, usia)
+      : kunciSama(nama, tanggalLahir!);
 
   /// Salinan dengan biodata baru (kode & waktu dibuat tetap).
   Pengungsi ubahData({
     required int? poskoId,
     required String nama,
     required String asal,
-    required DateTime tanggalLahir,
+    DateTime? tanggalLahir,
+    int? usia,
     required String jenisKelamin,
     required String nomorKk,
     required String kondisiKesehatan,
@@ -138,7 +154,7 @@ class Pengungsi {
       nama: nama,
       asal: asal,
       tanggalLahir: tanggalLahir,
-      usia: Tanggal.usia(tanggalLahir),
+      usia: hitungUsia(tanggalLahir, usia),
       jenisKelamin: jenisKelamin,
       nomorKk: nomorKk,
       kondisiKesehatan: _kondisi(kondisiKesehatan),

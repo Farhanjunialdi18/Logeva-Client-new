@@ -77,8 +77,9 @@ class BukaBerkasMasuk {
 
     final sesi = SessionService.instance;
     final admin = sesi.admin;
-    // Admin yang masih wajib ganti password belum boleh membuka apa pun.
-    final adminSiap = admin != null && !AdminRepository.instance.masihPasswordBawaan(admin);
+    // Admin yang akunnya belum lengkap (password/nama bawaan) belum boleh
+    // membuka apa pun.
+    final adminSiap = admin != null && !AdminRepository.instance.perluDilengkapi(admin);
     final relawan = sesi.relawan != null;
     final belumLogin = admin == null && !relawan;
 
@@ -103,7 +104,7 @@ class BukaBerkasMasuk {
         } else if (belumLogin) {
           _pesan('File sinkron diterima. Login dulu, file langsung dibuka setelah login.');
         } else {
-          _pesan('File sinkron diterima. Ganti dulu password bawaan admin, file '
+          _pesan('File sinkron diterima. Lengkapi dulu akun admin (nama & password), file '
               'langsung dibuka setelahnya.');
         }
       case JenisBerkas.cadangan:

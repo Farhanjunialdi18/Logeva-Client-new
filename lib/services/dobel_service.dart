@@ -59,7 +59,6 @@ class DobelService {
     final kelompok = <String, List<Pengungsi>>{};
     for (final p in await PengungsiRepository.withStore(s).getAll()) {
       final k = p.kunci;
-      if (k == null) continue; // data lama tanpa tanggal lahir
       (kelompok['${p.poskoId}|$k'] ??= []).add(p);
     }
 
@@ -97,7 +96,8 @@ class DobelService {
       poskoId: pilihan.poskoId,
       nama: pilihan.nama,
       asal: isi((p) => p.asal),
-      tanggalLahir: pilihan.tanggalLahir!,
+      tanggalLahir: pilihan.tanggalLahir,
+      usia: pilihan.usia,
       jenisKelamin: pilihan.jenisKelamin,
       nomorKk: isi((p) => p.nomorKk),
       kondisiKesehatan: pilihan.kondisiKesehatan,

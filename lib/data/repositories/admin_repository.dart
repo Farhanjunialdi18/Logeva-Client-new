@@ -150,6 +150,17 @@ class AdminRepository {
         salt: admin.passwordSalt,
       );
 
+  /// Nama admin masih bawaan ("Admin GMLS")? Nama ini dikirim ke website
+  /// sebagai ADMIN POSKO (penanggung jawab), jadi wajib diganti nama asli.
+  bool masihNamaBawaan(Admin admin) =>
+      admin.nama.trim().toLowerCase() == defaultNama.toLowerCase() ||
+      admin.nama.trim().isEmpty;
+
+  /// Akun belum lengkap: password atau nama masih bawaan. Admin harus
+  /// melengkapinya dulu sebelum memakai aplikasi.
+  bool perluDilengkapi(Admin admin) =>
+      masihPasswordBawaan(admin) || masihNamaBawaan(admin);
+
   /// Ganti password. Hasil: pesan kesalahan, atau null kalau berhasil.
   /// [lama] diisi = password lama dicek dulu (halaman Keamanan).
   Future<String?> gantiPassword(Admin admin, String baru, {String? lama}) async {

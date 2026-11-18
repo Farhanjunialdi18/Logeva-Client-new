@@ -376,15 +376,6 @@ class PaketDataService {
     ];
 
     final peringatan = <String>[];
-    for (final p in paket.posko) {
-      final tanpaLahir = paket.pengungsi
-          .where((e) => e.poskoId == p.id && !e.isDihapus && e.perluDilengkapi)
-          .length;
-      if (tanpaLahir > 0) {
-        peringatan.add('${p.label}: $tanpaLahir pengungsi belum punya tanggal '
-            'lahir (data versi lama). Sebaiknya dilengkapi dulu.');
-      }
-    }
     if (paket.admin.isEmpty) {
       peringatan.add('Tidak ada admin aktif, jadi pusat tidak tahu siapa '
           'penanggung jawabnya.');

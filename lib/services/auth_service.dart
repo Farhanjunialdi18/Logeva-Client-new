@@ -75,7 +75,8 @@ class AuthService {
     return AuthResult(
       success: true,
       message: 'Login berhasil.',
-      wajibGantiPassword: AdminRepository.instance.masihPasswordBawaan(admin),
+      // Password / nama masih bawaan: lengkapi akun dulu.
+      wajibGantiPassword: AdminRepository.instance.perluDilengkapi(admin),
     );
   }
 

@@ -2,11 +2,12 @@
 // pengungsi_form_screen.dart
 // FORM TAMBAH / EDIT PENGUNGSI. Kolom, pilihan, dan aturan sama
 // dengan form Pengungsi di website:
-//  - Tanggal lahir wajib; usia dihitung otomatis.
+//  - Isi TANGGAL LAHIR (usia dihitung otomatis) ATAU langsung USIA
+//    kalau tanggal lahir tidak diketahui.
 //  - Nomor KK boleh kosong (dokumen bisa hilang saat bencana),
 //    kalau diisi harus 16 digit.
-//  - Nama + tanggal lahir yang sama di posko yang sama = orang yang
-//    sama (ditolak supaya tidak dobel).
+//  - Nama + tanggal lahir (atau nama + usia) yang sama di posko yang
+//    sama = orang yang sama (ditolak supaya tidak dobel).
 // Relawan: posko otomatis = posko tugasnya. Admin: pilih posko.
 // ============================================================
 
@@ -22,6 +23,7 @@ import '../../../services/session_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/app_snackbar.dart';
+import '../../../utils/pengingat_setor.dart';
 import '../../../utils/tanggal.dart';
 import '../../../utils/validators.dart';
 import '../../../utils/waktu_wib.dart';
@@ -51,7 +53,13 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
   late final TextEditingController _kondisi;
   late final TextEditingController _riwayat;
   late final TextEditingController _poskoTeks;
+  late final TextEditingController _usia;
 
+  static const String _modeLahir = 'lahir';
+  static const String _modeUsia = 'usia';
+
+  /// Isian umur: tanggal lahir atau usia saja.
+  String _modeUmur = _modeLahir;
   DateTime? _tanggalLahir;
   String _jenisKelamin = DataOptions.lakiLaki;
   String _rentan = DataOptions.bukanRentan;
@@ -72,6 +80,8 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
     _nama = TextEditingController(text: e?.nama ?? '');
     _asal = TextEditingController(text: e?.asal ?? '');
     _tanggalLahir = e?.tanggalLahir;
+    _modeUmur = e != null && e.hanyaUsia ? _modeUsia : _modeLahir;
+    _usia = TextEditingController(text: e != null && e.hanyaUsia ? '${e.usia}' : '');
     _kk = TextEditingController(text: e?.nomorKk ?? '');
     _kondisi = TextEditingController(
       text: e == null || e.kondisiKesehatan == DataOptions.kondisiSehat
@@ -98,7 +108,7 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
   @override
   void dispose() {
     for (final c in [
-      _nama, _asal, _kk, _kondisi, _riwayat, _poskoTeks,
+      _nama, _asal, _kk, _kondisi, _riwayat, _poskoTeks, _usia,
     ]) {
       c.dispose();
     }
@@ -122,13 +132,17 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
     setState(() => _saving = true);
 
     final kk = Validators.bersihkanKk(_kk.text);
+    final pakaiLahir = _modeUmur == _modeLahir;
+    final lahir = pakaiLahir ? _tanggalLahir : null;
+    final usia = pakaiLahir ? null : int.parse(_usia.text.trim());
     final e = widget.existing;
     final data = e == null
         ? Pengungsi.baru(
             poskoId: _poskoId,
             nama: _nama.text.trim(),
             asal: _asal.text.trim(),
-            tanggalLahir: _tanggalLahir!,
+            tanggalLahir: lahir,
+            usia: usia,
             jenisKelamin: _jenisKelamin,
             nomorKk: kk,
             kondisiKesehatan: _kondisi.text,
@@ -140,7 +154,8 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
             poskoId: _poskoId,
             nama: _nama.text.trim(),
             asal: _asal.text.trim(),
-            tanggalLahir: _tanggalLahir!,
+            tanggalLahir: lahir,
+            usia: usia,
             jenisKelamin: _jenisKelamin,
             nomorKk: kk,
             kondisiKesehatan: _kondisi.text,
@@ -155,8 +170,8 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
         setState(() => _saving = false);
         AppSnackbar.show(
           context,
-          '${sama.nama} dengan tanggal lahir yang sama sudah tercatat di '
-          'posko ini.',
+          '${sama.nama} dengan ${pakaiLahir ? 'tanggal lahir' : 'usia'} yang '
+          'sama sudah tercatat di posko ini.',
           isError: true,
         );
         return;
@@ -168,10 +183,11 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
         await PengungsiRepository.instance.add(data);
       }
       if (!mounted) return;
-      AppSnackbar.show(
+      await PengingatSetor.setelahSimpan(
         context,
         _isEdit ? 'Data pengungsi diperbarui.' : 'Pengungsi berhasil ditambahkan.',
       );
+      if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -226,15 +242,6 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              if (widget.existing?.perluDilengkapi ?? false) ...[
-                Text(
-                  'Data ini dari versi lama aplikasi. Lengkapi tanggal lahir '
-                  'supaya bisa dikirim ke pusat.',
-                  style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
-                ),
-                const SizedBox(height: 16),
-              ],
-
               // Posko hampir/sudah penuh: tetap boleh dicatat, tapi diberi tahu.
               if (!_isEdit && _poskoId != null)
                 KotakPeringatan(
@@ -263,20 +270,53 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              TanggalField(
-                label: 'Tanggal lahir',
-                value: _tanggalLahir,
-                initialDate: DateTime(WaktuWib.hariIni().year - 30),
-                onChanged: (v) => setState(() => _tanggalLahir = v),
-                validator: Validators.tanggalLahir,
+              SegmentedChoice(
+                label: 'UMUR',
+                options: const {
+                  _modeLahir: 'Tanggal lahir',
+                  _modeUsia: 'Usia saja',
+                },
+                selected: _modeUmur,
+                onChanged: (v) => setState(() => _modeUmur = v),
               ),
-              const SizedBox(height: 8),
-              Text(
-                lahir == null
-                    ? 'Usia dihitung otomatis dari tanggal lahir.'
-                    : 'Usia: ${Tanggal.usia(lahir)} tahun',
-                style: AppTextStyles.small(p),
-              ),
+              const SizedBox(height: 12),
+              if (_modeUmur == _modeLahir) ...[
+                TanggalField(
+                  key: const ValueKey('tanggal_lahir'),
+                  label: 'Tanggal lahir',
+                  value: _tanggalLahir,
+                  initialDate: DateTime(WaktuWib.hariIni().year - 30),
+                  onChanged: (v) => setState(() => _tanggalLahir = v),
+                  validator: Validators.tanggalLahir,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  lahir == null
+                      ? 'Usia dihitung otomatis dari tanggal lahir.'
+                      : 'Usia: ${Tanggal.usia(lahir)} tahun',
+                  style: AppTextStyles.small(p),
+                ),
+              ] else ...[
+                AppTextField(
+                  key: const ValueKey('usia'),
+                  label: 'USIA (TAHUN)',
+                  isRequired: true,
+                  hint: 'Contoh: 45 (bayi di bawah 1 tahun: 0)',
+                  controller: _usia,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(3),
+                  ],
+                  validator: Validators.usia,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Pakai kalau tanggal lahir tidak diketahui. Isi tanggal lahir '
+                  'kalau ada, supaya usia selalu tepat.',
+                  style: AppTextStyles.small(p),
+                ),
+              ],
               const SizedBox(height: 16),
 
               SegmentedChoice(

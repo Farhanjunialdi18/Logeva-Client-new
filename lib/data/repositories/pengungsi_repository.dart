@@ -60,10 +60,10 @@ class PengungsiRepository {
       (await getDiPosko(poskoId: poskoId)).length;
 
   /// Pengungsi yang dianggap ORANG YANG SAMA (aturan website): nama tanpa
-  /// beda huruf besar/kecil + tanggal lahir sama, di posko yang sama.
+  /// beda huruf besar/kecil + tanggal lahir sama (atau nama + usia kalau
+  /// tanggal lahir tidak diisi), di posko yang sama.
   Future<Pengungsi?> cariSama(Pengungsi data) async {
     final kunci = data.kunci;
-    if (kunci == null) return null;
     for (final e in await getByPosko(data.poskoId)) {
       if (e.id != data.id && e.kunci == kunci) return e;
     }

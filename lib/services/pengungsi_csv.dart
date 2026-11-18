@@ -4,8 +4,8 @@
 // judul kolom, urutan, pilihan nilai, dan aturan validasinya sama
 // (PengungsiImportController), supaya file bisa diimpor bolak-balik.
 //
-// Bedanya dengan website: Nomor KK boleh kosong (keputusan pemilik
-// proyek, dokumen bisa hilang saat bencana).
+// Nomor KK boleh kosong (dokumen bisa hilang saat bencana). Tanggal
+// lahir ATAU usia wajib diisi salah satu (sama dengan website).
 // ============================================================
 
 import '../core/data_options.dart';
@@ -19,6 +19,9 @@ class BarisPengungsi {
   final String nama;
   final String asal;
   final DateTime? tanggalLahir;
+
+  /// Usia kalau tanggal lahir kosong (pilih salah satu).
+  final int? usia;
   final String jenisKelamin;
 
   /// null = kolom kosong (data lama tidak diubah saat memperbarui).
@@ -34,6 +37,7 @@ class BarisPengungsi {
     required this.nama,
     required this.asal,
     required this.tanggalLahir,
+    this.usia,
     required this.jenisKelamin,
     required this.nomorKk,
     required this.kondisiKesehatan,
@@ -44,17 +48,23 @@ class BarisPengungsi {
 
   bool get valid => error.isEmpty;
 
-  /// Kunci orang yang sama: nama (huruf kecil) + tanggal lahir.
-  String? get kunci => nama.isEmpty || tanggalLahir == null
+  /// Kunci orang yang sama: nama (huruf kecil) + tanggal lahir, atau
+  /// nama + usia kalau tanggal lahir kosong.
+  String? get kunci => nama.isEmpty
       ? null
-      : Pengungsi.kunciSama(nama, tanggalLahir!);
+      : tanggalLahir != null
+          ? Pengungsi.kunciSama(nama, tanggalLahir!)
+          : usia != null
+              ? Pengungsi.kunciUsia(nama, usia!)
+              : null;
 
   /// Jadi pengungsi baru di posko [poskoId].
   Pengungsi keBaru(int poskoId, String dicatatOleh) => Pengungsi.baru(
         poskoId: poskoId,
         nama: nama,
         asal: asal,
-        tanggalLahir: tanggalLahir!,
+        tanggalLahir: tanggalLahir,
+        usia: usia,
         jenisKelamin: jenisKelamin,
         nomorKk: nomorKk ?? '',
         kondisiKesehatan: kondisiKesehatan ?? '',
@@ -68,7 +78,8 @@ class BarisPengungsi {
         poskoId: lama.poskoId,
         nama: nama,
         asal: asal,
-        tanggalLahir: tanggalLahir!,
+        tanggalLahir: tanggalLahir,
+        usia: usia,
         jenisKelamin: jenisKelamin,
         nomorKk: nomorKk ?? lama.nomorKk,
         kondisiKesehatan: kondisiKesehatan ?? lama.kondisiKesehatan,
@@ -156,7 +167,7 @@ class PengungsiCsv {
     final lahir = Tanggal.baca(teksLahir);
     DateTime? lahirValid;
     if (teksLahir.isEmpty) {
-      error.add('Tanggal lahir kosong');
+      // Boleh kosong kalau usia diisi (dicek di bawah).
     } else if (lahir == null) {
       error.add('Tanggal lahir tidak dikenali, gunakan format '
           'TAHUN-BULAN-TANGGAL (contoh: 1990-07-25)');
@@ -167,8 +178,12 @@ class PengungsiCsv {
     }
 
     final teksUsia = _ambil(row, 'usia').trim();
-    if (teksUsia.isNotEmpty) {
+    int? usiaValid;
+    if (teksUsia.isEmpty) {
+      if (teksLahir.isEmpty) error.add('Isi tanggal lahir atau usia');
+    } else {
       final usia = int.tryParse(teksUsia);
+      if (usia != null && usia >= 0 && usia <= 130) usiaValid = usia;
       if (usia == null || usia < 0 || usia > 130) {
         error.add('Usia harus bilangan bulat 0–130');
       } else if (lahirValid != null) {
@@ -221,6 +236,7 @@ class PengungsiCsv {
       nama: nama,
       asal: asal,
       tanggalLahir: lahirValid,
+      usia: lahirValid == null ? usiaValid : null,
       jenisKelamin: jk ?? DataOptions.lakiLaki,
       nomorKk: kk,
       kondisiKesehatan: _teks(_ambil(row, 'kondisi_kesehatan')),

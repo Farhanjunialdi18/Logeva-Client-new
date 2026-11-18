@@ -87,7 +87,6 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
     final list = _hasilCari;
-    final perluDilengkapi = _semua.where((e) => e.perluDilengkapi).length;
     final diPosko = _semua.where((e) => e.masihDiPosko).length;
     final keluar = _semua.length - diPosko;
 
@@ -129,13 +128,6 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
           ),
           const SizedBox(height: 6),
 
-          if (perluDilengkapi > 0) ...[
-            Text(
-              '⚠ $perluDilengkapi pengungsi belum punya tanggal lahir '
-              '(data versi lama). Ketuk baris bertanda ⚠ untuk melengkapi.',
-              style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
-            ),
-          ],
           const SizedBox(height: 14),
 
           DataTableCard(
@@ -154,8 +146,7 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
             ],
             rows: list
                 .map((e) => [
-                      '${e.perluDilengkapi ? '⚠ ' : ''}'
-                          '${e.masihDiPosko ? '' : '↗ '}${e.nama}',
+                      '${e.masihDiPosko ? '' : '↗ '}${e.nama}',
                       e.isPerempuan ? 'P' : 'L',
                       '${e.usia} th',
                       e.isRentan ? e.kelompokRentan : '-',

@@ -296,7 +296,7 @@ void main() {
     expect(PaketDataService.periksa(await kumpulkan([])).bisaEkspor, isFalse);
   });
 
-  test('pengungsi lama tanpa tanggal lahir hanya diperingatkan', () async {
+  test('pengungsi tanpa tanggal lahir (usia saja) ikut terkirim', () async {
     await store.insert('pengungsi', {
       'kode': '22222222-2222-4222-8222-222222222222',
       'posko_id': posko.id,
@@ -310,9 +310,10 @@ void main() {
     final paket = await kumpulkan([posko]);
     final hasil = PaketDataService.periksa(paket);
     expect(hasil.bisaEkspor, isTrue);
-    expect(hasil.peringatan.single, contains('1 pengungsi belum punya tanggal'));
+    expect(hasil.peringatan.where((p) => p.contains('tanggal')), isEmpty);
     final lama = bukaZip(paket)['pengungsi.csv']!
         .firstWhere((r) => r['nama'] == 'Data Lama');
     expect(lama['tanggal_lahir'], '');
+    expect(lama['usia'], '40');
   });
 }

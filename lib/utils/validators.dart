@@ -50,12 +50,22 @@ class Validators {
 
   // ---------------- PENGUNGSI (aturan sama dengan website) ----------------
 
-  /// Tanggal lahir wajib, tidak boleh setelah hari ini, tahun >= 1900.
+  /// Tanggal lahir (mode Tanggal lahir): tidak boleh setelah hari ini, tahun >= 1900.
   static String? tanggalLahir(DateTime? value) {
     if (value == null) return 'Tanggal lahir wajib diisi.';
     if (value.isAfter(WaktuWib.hariIni()) || value.year < 1900) {
       return 'Tanggal lahir tidak masuk akal (${Tanggal.tampil(value)}).';
     }
+    return null;
+  }
+
+  /// Usia (kalau tanggal lahir tidak diketahui): bilangan bulat 0–130,
+  /// sama dengan website.
+  static String? usia(String? value) {
+    final teks = (value ?? '').trim();
+    if (teks.isEmpty) return 'Usia wajib diisi (atau pilih Tanggal lahir).';
+    final n = int.tryParse(teks);
+    if (n == null || n < 0 || n > 130) return 'Usia harus angka 0–130.';
     return null;
   }
 

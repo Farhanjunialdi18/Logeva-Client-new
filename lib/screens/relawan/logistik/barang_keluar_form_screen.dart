@@ -22,6 +22,7 @@ import '../../../services/session_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/app_snackbar.dart';
+import '../../../utils/pengingat_setor.dart';
 import '../../../utils/validators.dart';
 import '../../../utils/waktu_wib.dart';
 import '../../../widgets/app_background.dart';
@@ -130,7 +131,8 @@ class _BarangKeluarFormScreenState extends State<BarangKeluarFormScreen> {
       await LogistikRepository.instance.catatKeluar(data,
           barang: barang, izinkanMelebihiStok: _anggota && melebihi);
       if (!mounted) return;
-      AppSnackbar.show(context, 'Barang keluar dicatat, stok berkurang.');
+      await PengingatSetor.setelahSimpan(context, 'Barang keluar dicatat, stok berkurang.');
+      if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;

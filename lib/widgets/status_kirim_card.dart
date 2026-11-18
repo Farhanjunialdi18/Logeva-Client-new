@@ -16,6 +16,7 @@ import '../services/sinkron_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../utils/date_formatter.dart';
+import '../screens/sinkron/log_setor_screen.dart';
 import 'kirim_ke_admin_button.dart';
 
 class StatusKirimCard extends StatefulWidget {
@@ -55,29 +56,33 @@ class _StatusKirimCardState extends State<StatusKirimCard> {
   @override
   Widget build(BuildContext context) {
     final s = _status;
-    if (!PerangkatService.isAnggota || s == null) return const SizedBox.shrink();
+    if (!PerangkatService.isAnggota || s == null) {
+      return const SizedBox.shrink();
+    }
     final p = AppPalette.of(context);
 
     final belum = s.belumTerkirim;
-    final terlambat = s.terakhirKirim == null ||
-        DateTime.now().difference(s.terakhirKirim!) > StatusKirimCard.batasPengingat;
+    final terlambat =
+        s.terakhirKirim == null ||
+        DateTime.now().difference(s.terakhirKirim!) >
+            StatusKirimCard.batasPengingat;
     final warna = belum == 0
         ? AppColors.success
         : terlambat
-            ? AppColors.error
-            : AppColors.sun;
+        ? AppColors.error
+        : AppColors.sun;
 
     Widget baris(IconData ikon, Color c, String teks) => Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(ikon, size: 18, color: c),
-              const SizedBox(width: 8),
-              Expanded(child: Text(teks, style: AppTextStyles.small(p))),
-            ],
-          ),
-        );
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(ikon, size: 18, color: c),
+          const SizedBox(width: 8),
+          Expanded(child: Text(teks, style: AppTextStyles.small(p))),
+        ],
+      ),
+    );
 
     return Container(
       width: double.infinity,
@@ -93,7 +98,9 @@ class _StatusKirimCardState extends State<StatusKirimCard> {
           Row(
             children: [
               Icon(
-                belum == 0 ? Icons.cloud_done_rounded : Icons.cloud_upload_rounded,
+                belum == 0
+                    ? Icons.cloud_done_rounded
+                    : Icons.cloud_upload_rounded,
                 color: warna,
               ),
               const SizedBox(width: 8),
@@ -120,21 +127,24 @@ class _StatusKirimCardState extends State<StatusKirimCard> {
             s.terakhirKirim == null
                 ? 'Belum pernah mengirim data ke admin.'
                 : 'Terakhir dikirim: ${DateFormatter.full(s.terakhirKirim!)} '
-                    '(${DateFormatter.lamaSejak(s.terakhirKirim!)}).',
+                      '(${DateFormatter.lamaSejak(s.terakhirKirim!)}).',
           ),
           if (s.terakhirKirim != null)
             s.sudahDikonfirmasi
-                ? baris(Icons.verified_rounded, AppColors.success,
-                    'Admin sudah menggabungkan kiriman terakhir Anda.')
+                ? baris(
+                    Icons.verified_rounded,
+                    AppColors.success,
+                    'Admin sudah menggabungkan kiriman terakhir Anda.',
+                  )
                 : baris(
                     Icons.hourglass_top_rounded,
                     AppColors.sun,
                     s.diterimaInduk == null
                         ? 'Belum ada konfirmasi dari admin. Konfirmasi muncul '
-                            'setelah admin menggabungkan data Anda lalu mengirim '
-                            'data gabungan ke HP ini.'
+                              'setelah admin menggabungkan data Anda lalu mengirim '
+                              'data gabungan ke HP ini.'
                         : 'Kiriman terakhir belum dikonfirmasi admin (yang sudah '
-                            'digabung: kiriman ${DateFormatter.full(s.diterimaInduk!)}).',
+                              'digabung: kiriman ${DateFormatter.full(s.diterimaInduk!)}).',
                   ),
           baris(
             Icons.download_rounded,
@@ -143,8 +153,20 @@ class _StatusKirimCardState extends State<StatusKirimCard> {
                 ? 'Belum pernah menerima data gabungan dari admin.'
                 : 'Data dari admin terakhir: ${DateFormatter.full(s.terakhirDariInduk!)}.',
           ),
+          // Di halaman Sinkron sudah ada tombol LOG SETOR DATA sendiri.
+          if (widget.tampilkanTombol)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LogSetorScreen()),
+                ),
+                icon: const Icon(Icons.history_rounded, size: 18),
+                label: const Text('Lihat log setor data'),
+              ),
+            ),
           if (widget.tampilkanTombol) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
             const KirimKeAdminButton(),
           ],
         ],

@@ -144,6 +144,18 @@ void main() {
     expect(baris['ketinggian_mdpl'], '45.5');
   });
 
+  test('pengungsi website tanpa tanggal lahir (usia saja) masuk ke HP', () async {
+    await GabungPaketService.terapkanWebsite(paketWebsite(pengungsi: [
+      ['a1b2c3d4-0003-4000-8000-000000000003', _kodePosko, 'Mak Inah', 'Cikaret', '',
+        '', '72', 'Perempuan', 'Sehat', 'Lansia', '', 'Raja', '2026-11-07 09:00:00',
+        '2026-11-07 09:00:00', '', 'di_posko', '', ''],
+    ]), store: hp);
+    final inah = (await PengungsiRepository.withStore(hp).getAll()).single;
+    expect(inah.tanggalLahir, isNull);
+    expect(inah.usia, 72);
+    expect(inah.hanyaUsia, isTrue);
+  });
+
   test('impor ulang tidak dobel; data website yang lebih baru memperbarui posko', () async {
     await GabungPaketService.terapkanWebsite(paketWebsite(), store: hp);
     final lagi = await GabungPaketService.periksaWebsite(paketWebsite(), store: hp);

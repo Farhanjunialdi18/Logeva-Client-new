@@ -20,6 +20,8 @@ import 'package:flutter_application_1/models/posko.dart';
 import 'package:flutter_application_1/models/relawan.dart';
 import 'package:flutter_application_1/services/berkas_masuk_service.dart';
 import 'package:flutter_application_1/services/gabung_paket_service.dart';
+import 'package:flutter_application_1/services/csv_service.dart';
+import 'package:flutter_application_1/services/paket_data_service.dart';
 import 'package:flutter_application_1/services/penyiapan_service.dart';
 import 'package:flutter_application_1/services/sinkron_service.dart';
 import 'package:flutter_application_1/utils/waktu_wib.dart';
@@ -349,5 +351,28 @@ void main() {
     expect(s.akunBelumBerlaku, isFalse);
     expect(s.adaDataBaru, isFalse);
     expect(s.perluDibagikan, isFalse);
+  });
+
+  test('pengungsi usia saja: Anggota -> Induk -> paket website, tanpa dobel', () async {
+    final posko = await poskoDi(a);
+    await PengungsiRepository.withStore(a).add(Pengungsi.baru(
+      poskoId: posko.id, nama: 'Mak Inah', asal: 'X', usia: 72,
+      jenisKelamin: DataOptions.perempuan,
+    ));
+    for (var i = 0; i < 2; i++) {
+      await SinkronService.terapkan(await kirimDari(a), store: induk);
+    }
+    final diInduk = (await PengungsiRepository.withStore(induk).getAll())
+        .where((p) => p.nama == 'Mak Inah')
+        .toList();
+    expect(diInduk, hasLength(1), reason: 'kirim 2x tidak dobel');
+    expect(diInduk.single.tanggalLahir, isNull);
+    expect(diInduk.single.usia, 72);
+
+    final paket = await PaketDataService.kumpulkan([await poskoDi(induk)], store: induk);
+    final baris = CsvService.decode(paket.csv['pengungsi.csv']!)
+        .firstWhere((r) => r['nama'] == 'Mak Inah');
+    expect(baris['tanggal_lahir'], '');
+    expect(baris['usia'], '72');
   });
 }

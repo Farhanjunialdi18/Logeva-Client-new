@@ -72,7 +72,8 @@ class _KirimKeAdminButtonState extends State<KirimKeAdminButton> {
           jenis: RiwayatTransaksi.jenisExport,
           jenisData: 'Sinkron Antar-HP',
           berhasil: true,
-          keterangan: nama,
+          // LOG SETOR DATA: apa yang disetor & nama filenya.
+          keterangan: 'Setor ke admin: ${SinkronService.teksIsi(bytes)} · $nama',
         );
       }
       if (!mounted || !ok) return;

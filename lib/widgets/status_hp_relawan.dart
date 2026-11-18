@@ -183,6 +183,7 @@ class _PengingatHpRelawanBannerState extends State<PengingatHpRelawanBanner> {
   int _perluDibagikan = 0;
   int _akunBelumBerlaku = 0;
   int _belumKirim = 0;
+  List<String> _namaBelumKirim = const [];
 
   @override
   void initState() {
@@ -201,6 +202,7 @@ class _PengingatHpRelawanBannerState extends State<PengingatHpRelawanBanner> {
     if (PerangkatService.isAnggota) return;
     final semua = await SinkronService.statusHpRelawan();
     var perlu = 0, akun = 0, belum = 0;
+    final namaBelum = <String>[];
     for (final r in await RelawanRepository.instance.getAll()) {
       if (!r.sudahDitempatkan) continue;
       final s = SinkronService.statusUntuk(semua, r.kode);
@@ -209,13 +211,17 @@ class _PengingatHpRelawanBannerState extends State<PengingatHpRelawanBanner> {
       if (s.akunBelumBerlaku) akun++;
       if (!r.isAktif) continue;
       if (s.perluDibagikan) perlu++;
-      if (!s.belumPernahDibagikan && s.belumKirimHariIni()) belum++;
+      if (!s.belumPernahDibagikan && s.belumKirimHariIni()) {
+        belum++;
+        namaBelum.add(r.nama);
+      }
     }
     if (!mounted) return;
     setState(() {
       _perluDibagikan = perlu;
       _akunBelumBerlaku = akun;
       _belumKirim = belum;
+      _namaBelumKirim = namaBelum..sort();
     });
   }
 
@@ -231,7 +237,11 @@ class _PengingatHpRelawanBannerState extends State<PengingatHpRelawanBanner> {
       if (_akunBelumBerlaku > 0)
         '$_akunBelumBerlaku HP relawan memakai AKUN LAMA (PIN/status belum berlaku): bagikan ulang.',
       if (_perluDibagikan > 0) '$_perluDibagikan HP relawan perlu dibagikan (ulang).',
-      if (_belumKirim > 0) '$_belumKirim relawan belum mengirim data hari ini.',
+      if (_belumKirim > 0)
+        '$_belumKirim relawan belum setor data hari ini: '
+            '${_namaBelumKirim.take(3).join(', ')}'
+            '${_namaBelumKirim.length > 3 ? ' (+${_namaBelumKirim.length - 3} lagi)' : ''}. '
+            'Ingatkan untuk KIRIM DATA KE ADMIN.',
     ];
 
     return Padding(

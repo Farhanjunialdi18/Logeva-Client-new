@@ -28,9 +28,9 @@ class PengungsiDetailSheet {
       title: data.nama,
       rows: {
         'Tanggal lahir': data.tanggalLahir == null
-            ? 'Belum diisi (perlu dilengkapi)'
+            ? 'Tidak diketahui'
             : Tanggal.tampil(data.tanggalLahir!),
-        'Usia': '${data.usia} tahun',
+        'Usia': '${data.usia} tahun${data.hanyaUsia ? ' (diisi langsung)' : ''}',
         'Jenis kelamin': data.jenisKelamin,
         'Asal': _isi(data.asal),
         'Nomor KK': data.nomorKk.isEmpty ? 'Belum diketahui' : data.nomorKk,

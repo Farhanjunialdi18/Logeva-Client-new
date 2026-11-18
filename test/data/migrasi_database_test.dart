@@ -216,7 +216,7 @@ void main() {
     expect(kode.every(KodeUnik.valid), isTrue);
 
     final model = rows.map(Pengungsi.fromMap).toList();
-    expect(model.every((e) => e.perluDilengkapi), isTrue);
+    expect(model.every((e) => e.hanyaUsia), isTrue);
     await store.close();
   });
 
