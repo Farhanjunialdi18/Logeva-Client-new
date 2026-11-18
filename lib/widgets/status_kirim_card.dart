@@ -120,14 +120,20 @@ class _StatusKirimCardState extends State<StatusKirimCard> {
               AppColors.error,
               'Kirim sekarang. Data yang belum dikirim akan HILANG kalau HP ini '
               'rusak, hilang, atau baterai habis total.',
+            )
+          else if (belum > 0)
+            baris(
+              Icons.notifications_active_rounded,
+              AppColors.sun,
+              'Jangan lupa setor: tekan KIRIM DATA KE ADMIN setelah selesai '
+              'mencatat.',
             ),
           baris(
             Icons.upload_rounded,
             p.textSecondary,
             s.terakhirKirim == null
                 ? 'Belum pernah mengirim data ke admin.'
-                : 'Terakhir dikirim: ${DateFormatter.full(s.terakhirKirim!)} '
-                      '(${DateFormatter.lamaSejak(s.terakhirKirim!)}).',
+                : 'Terakhir dikirim: ${DateFormatter.waktuInput(s.terakhirKirim!)}.',
           ),
           if (s.terakhirKirim != null)
             s.sudahDikonfirmasi
@@ -151,7 +157,7 @@ class _StatusKirimCardState extends State<StatusKirimCard> {
             p.textSecondary,
             s.terakhirDariInduk == null
                 ? 'Belum pernah menerima data gabungan dari admin.'
-                : 'Data dari admin terakhir: ${DateFormatter.full(s.terakhirDariInduk!)}.',
+                : 'Data dari admin terakhir: ${DateFormatter.waktuInput(s.terakhirDariInduk!)}.',
           ),
           // Di halaman Sinkron sudah ada tombol LOG SETOR DATA sendiri.
           if (widget.tampilkanTombol)

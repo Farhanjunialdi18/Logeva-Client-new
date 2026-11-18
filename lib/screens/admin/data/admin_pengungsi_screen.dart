@@ -16,6 +16,7 @@ import '../../../models/posko.dart';
 import '../../../services/dobel_service.dart';
 import '../../../services/perangkat_service.dart';
 import '../../../services/transfer_service.dart';
+import '../../../utils/date_formatter.dart';
 import '../../../utils/app_snackbar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
@@ -236,6 +237,8 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
                     '${e.kondisiKesehatan} · '
                         '${e.posko.isEmpty ? _tanpaPosko : e.posko}',
                     if (!e.masihDiPosko) '↗ ${e.labelKeberadaan}',
+                    'Dicatat ${DateFormatter.waktuInput(e.dibuatPada)}'
+                        '${e.dicatatOleh.isEmpty ? '' : ' · ${e.dicatatOleh}'}',
                   ],
                   onTap: () => PengungsiDetailSheet.show(context, e),
                 ),

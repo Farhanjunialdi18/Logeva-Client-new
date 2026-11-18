@@ -46,9 +46,12 @@ class PengungsiDetailSheet {
                 if (data.keteranganKeluar.isNotEmpty) '(${data.keteranganKeluar})',
               ].join(' '),
         'Dicatat': [
-          DateFormatter.full(data.dibuatPada),
+          '${DateFormatter.waktuInput(data.dibuatPada)} '
+              '(${DateFormatter.full(data.dibuatPada)})',
           if (data.dicatatOleh.isNotEmpty) 'oleh ${data.dicatatOleh}',
         ].join(' '),
+        if (data.diubahPada.difference(data.dibuatPada).inMinutes >= 1)
+          'Terakhir diubah': DateFormatter.waktuInput(data.diubahPada),
       },
       teksAksiLain: data.masihDiPosko ? 'KELUAR DARI POSKO' : 'KEMBALI KE POSKO',
       ikonAksiLain:

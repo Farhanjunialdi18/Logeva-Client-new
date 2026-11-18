@@ -29,6 +29,20 @@ class DateFormatter {
   /// Contoh: 06 Oktober 2026
   static String date(DateTime d) => '${_dua(d.day)} ${_bulan[d.month - 1]} ${d.year}';
 
+  /// Waktu input yang mudah dibedakan: "Hari ini 14:32", "Kemarin 09:10",
+  /// "17 Nov 14:32" (tahun ini), "17 Nov 2025 14:32".
+  static String waktuInput(DateTime d, [DateTime? sekarang]) {
+    final n = sekarang ?? DateTime.now();
+    final jam = '${_dua(d.hour)}:${_dua(d.minute)}';
+    final hari = DateTime(n.year, n.month, n.day)
+        .difference(DateTime(d.year, d.month, d.day))
+        .inDays;
+    if (hari == 0) return 'Hari ini $jam';
+    if (hari == 1) return 'Kemarin $jam';
+    final tgl = '${_dua(d.day)} ${_bulanSingkat[d.month - 1]}';
+    return d.year == n.year ? '$tgl $jam' : '$tgl ${d.year} $jam';
+  }
+
   /// Lama waktu sejak [d] (per tanggal kalender): "hari ini", "kemarin",
   /// "12 hari lalu", "3 bulan lalu", "2 tahun 3 bulan lalu".
   /// Sama dengan App\Support\LamaWaktu::sejak() di website.

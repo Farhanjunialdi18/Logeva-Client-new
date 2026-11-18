@@ -208,14 +208,27 @@ void main() {
 
     final (_, hanyaLogistik) = await SinkronService.buatFile(posko,
         store: a, dibuatOleh: 'x', pengungsi: false);
-    await SinkronService.terapkan(hanyaLogistik, store: b);
-    expect(await namaPengungsi(b), isNot(contains('Siti')));
-    expect(await stokBeras(b), 50);
-
     // Kirim sebagian tidak menghapus data lain di HP tujuan.
     await SinkronService.terapkan(hanyaLogistik, store: induk);
     expect(await namaPengungsi(induk), contains('Siti'));
     expect(await stokBeras(induk), 50);
+  });
+
+  test('HP relawan tidak menerima file dari HP relawan lain (hanya setor ke admin)',
+      () async {
+    await catat(a, 'Siti', masuk: 50);
+    final dariA = await kirimDari(a);
+
+    final cek = await SinkronService.periksa(dariA, store: b);
+    expect(cek.ditolak, contains('hanya disetor ke admin'));
+    await expectLater(SinkronService.terapkan(dariA, store: b),
+        throwsA(isA<GabungException>()));
+    expect(await namaPengungsi(b), isNot(contains('Siti')));
+
+    // Ke HP admin tetap bisa; HP admin -> HP relawan juga tetap bisa.
+    await SinkronService.terapkan(dariA, store: induk);
+    expect(await namaPengungsi(induk), contains('Siti'));
+    expect((await SinkronService.periksa(await kirimDari(induk), store: b)).ditolak, isNull);
   });
 
   test('Buka dengan LOGEVA: file sinkron & penyiapan dikenali', () async {

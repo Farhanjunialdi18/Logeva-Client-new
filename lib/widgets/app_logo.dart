@@ -1,6 +1,7 @@
 // ============================================================
 // app_logo.dart
-// Logo GMLS bulat. Kalau file logo belum ada, tampil logo cadangan.
+// Logo LOGEVA bulat ("golden hour", sama dengan ikon aplikasi) di atas
+// lingkaran putih. Kalau file logo belum ada, tampil logo cadangan.
 // ============================================================
 
 import 'dart:math' as math;
@@ -23,7 +24,8 @@ class AppLogo extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFF0E1117),
+        // Putih = latar gambar logo, jadi tidak ada sudut gelap di tepinya.
+        color: Colors.white,
         border: Border.all(color: Colors.white, width: size > 48 ? 2 : 1.5),
         boxShadow: glow
             ? const [
@@ -39,6 +41,8 @@ class AppLogo extends StatelessWidget {
         child: Image.asset(
           AppConstants.logoPath,
           fit: BoxFit.cover,
+          // Gambar asli besar (1254 px): diperkecil saat dimuat supaya hemat memori.
+          cacheWidth: (size * 3).round(),
           errorBuilder: (context, error, stackTrace) => _FallbackLogo(size: size),
         ),
       ),

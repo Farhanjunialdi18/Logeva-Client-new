@@ -16,4 +16,12 @@ void main() {
     expect(cek(DateTime(2025, 11, 1, 10)), '1 tahun lalu');
     expect(cek(DateTime(2024, 8, 5, 10)), '2 tahun 3 bulan lalu');
   });
+
+  test('waktu input mudah dibedakan', () {
+    final n = DateTime(2026, 11, 19, 15, 0);
+    expect(DateFormatter.waktuInput(DateTime(2026, 11, 19, 14, 32), n), 'Hari ini 14:32');
+    expect(DateFormatter.waktuInput(DateTime(2026, 11, 18, 9, 5), n), 'Kemarin 09:05');
+    expect(DateFormatter.waktuInput(DateTime(2026, 11, 17, 8, 0), n), '17 Nov 08:00');
+    expect(DateFormatter.waktuInput(DateTime(2025, 12, 31, 23, 59), n), '31 Des 2025 23:59');
+  });
 }

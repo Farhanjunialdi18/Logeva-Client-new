@@ -81,7 +81,9 @@ class _LogistikPoskoPanelState extends State<LogistikPoskoPanel> {
       await PengungsiRepository.instance.count(poskoId: id),
     );
     final terakhir = {for (final s in mentah) s.barang.id: s.terakhirDiperbarui};
-    final catatan = await LogistikRepository.instance.getCatatan(poskoId: id);
+    // Terbaru DIINPUT di atas (waktu input terlihat di kolom "Dicatat").
+    final catatan = await LogistikRepository.instance.getCatatan(poskoId: id)
+      ..sort((a, b) => b.dibuatPada.compareTo(a.dibuatPada));
     final barang = {
       for (final b in await BarangRepository.instance.getAll()) b.id!: b,
     };
@@ -140,15 +142,16 @@ class _LogistikPoskoPanelState extends State<LogistikPoskoPanel> {
       title: '${c.isMasuk ? 'Masuk' : 'Keluar'}: ${b?.namaItem ?? '-'}',
       rows: {
         'Jumlah': '${c.isMasuk ? '+' : '−'}${c.jumlah} $satuan',
-        'Tanggal': Tanggal.tampil(c.tanggal),
+        'Dicatat': [
+          '${DateFormatter.waktuInput(c.dibuatPada)} '
+              '(${DateFormatter.full(c.dibuatPada)})',
+          if (c.dicatatOleh.isNotEmpty) 'oleh ${c.dicatatOleh}',
+        ].join(' '),
+        c.isMasuk ? 'Tanggal masuk' : 'Tanggal keluar': Tanggal.tampil(c.tanggal),
         if (c is BarangMasuk) 'Sumber': c.sumberBantuan,
         if (c is BarangKeluar) 'Untuk': c.tujuanLabel,
         if (c is BarangKeluar && c.penerima.isNotEmpty) 'Penerima': c.penerima,
         if (c.keterangan.isNotEmpty) 'Keterangan': c.keterangan,
-        'Dicatat': [
-          DateFormatter.full(c.dibuatPada),
-          if (c.dicatatOleh.isNotEmpty) 'oleh ${c.dicatatOleh}',
-        ].join(' '),
       },
       catatan: 'Catatan tidak bisa diubah atau dihapus. Kalau ada kesalahan, '
           'buat catatan baru sebagai koreksi.',
@@ -242,14 +245,16 @@ class _LogistikPoskoPanelState extends State<LogistikPoskoPanel> {
           isLoading: _loading,
           emptyMessage: 'Belum ada catatan barang masuk/keluar.',
           columns: const [
-            TableColumnSpec('Tanggal', flex: 24),
-            TableColumnSpec('Barang', flex: 28),
-            TableColumnSpec('Jumlah', flex: 18),
-            TableColumnSpec('Ket.', flex: 30),
+            // Baris 1: tanggal dari form; baris 2: waktu input.
+            TableColumnSpec('Tgl / Dicatat', flex: 32),
+            TableColumnSpec('Barang', flex: 24),
+            TableColumnSpec('Jumlah', flex: 19),
+            TableColumnSpec('Ket.', flex: 25),
           ],
           rows: catatan
               .map((c) => [
-                    Tanggal.tampil(c.tanggal),
+                    '${Tanggal.tampil(c.tanggal)}\n'
+                        '${DateFormatter.waktuInput(c.dibuatPada)}',
                     _barang[c.barangId]?.namaItem ?? '-',
                     '${c.isMasuk ? '+' : '−'}${c.jumlah}',
                     c.ringkasan,

@@ -140,6 +140,13 @@ class _BerandaScreenState extends State<BerandaScreen> {
           Text('Data tersimpan di perangkat', style: AppTextStyles.small(p)),
           const SizedBox(height: 24),
 
+          // ---- PENGINGAT SETOR KE ADMIN (HP Anggota), paling atas supaya
+          // selalu terlihat: berapa data belum dikirim, kapan terakhir kirim.
+          if (PerangkatService.isAnggota) ...[
+            const StatusKirimCard(),
+            const SizedBox(height: 24),
+          ],
+
           // ---- Ringkasan data ----
           Text('RINGKASAN DATA POSKO', style: AppTextStyles.label(p)),
           const SizedBox(height: 12),
@@ -187,12 +194,6 @@ class _BerandaScreenState extends State<BerandaScreen> {
                   ),
                 ),
               ),
-            const SizedBox(height: 16),
-          ],
-
-          // ---- Status kirim ke admin (HP Anggota) ----
-          if (PerangkatService.isAnggota) ...[
-            const StatusKirimCard(),
             const SizedBox(height: 16),
           ],
 

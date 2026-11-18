@@ -321,7 +321,13 @@ class SinkronService {
 
     FilePenyiapan? akun;
     String? ditolak;
-    if (anggota && _adaAkun(bytes)) {
+    if (anggota && !_adaAkun(bytes)) {
+      // Data relawan hanya DISETOR KE ADMIN, tidak dipertukarkan antar-
+      // relawan: HP Anggota hanya menerima file dari HP Induk (yang selalu
+      // membawa akun). File dari HP relawan lain ditolak.
+      ditolak = 'File ini dari HP relawan, bukan dari HP admin. Data relawan '
+          'hanya disetor ke admin (HP Induk), tidak dikirim antar-relawan.';
+    } else if (anggota) {
       try {
         akun = PenyiapanService.baca(bytes);
         ditolak = await PenyiapanService.cekBoleh(akun, store: s);
