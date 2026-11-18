@@ -289,6 +289,30 @@ class SinkronService {
     }
   }
 
+  /// File dari HP Induk (berisi akun) untuk posko yang TIDAK ADA di HP ini:
+  /// tidak bisa digabung, jadi HP ini harus disiapkan ulang (dikosongkan
+  /// dulu) supaya ikut posko itu. Misal HP bekas dipakai sebagai HP Induk /
+  /// posko lain lalu dibagikan ke relawan.
+  static Future<bool> poskoTidakAdaDiHp(List<int> bytes, {TableStore? store}) async {
+    if (!_adaAkun(bytes)) return false;
+    final Set<String> kodeFile;
+    try {
+      final f = ZipDecoder().decodeBytes(bytes).findFile('posko.csv');
+      if (f == null) return false;
+      kodeFile = {
+        for (final r in CsvService.decode(utf8.decode(f.content, allowMalformed: true)))
+          if ((r['kode_posko'] ?? '').isNotEmpty) r['kode_posko']!,
+      };
+    } catch (_) {
+      return false;
+    }
+    if (kodeFile.isEmpty) return false;
+    final lokal = {
+      for (final r in await _s(store).getAll(DatabaseTables.posko)) r['kode'],
+    };
+    return !kodeFile.any(lokal.contains);
+  }
+
   /// Periksa File Sinkron tanpa menyimpan apa pun.
   static Future<PratinjauSinkron> periksa(List<int> bytes,
       {TableStore? store, DateTime? sekarang}) async {

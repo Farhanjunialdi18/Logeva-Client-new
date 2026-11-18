@@ -93,6 +93,11 @@ class BukaBerkasMasuk {
           // File dari HP Induk di HP relawan yang belum login / masih baru:
           // tanya "Sinkronkan data?" -> akun + data posko -> login PIN.
           await _penyiapan();
+        } else if (await _poskoLain()) {
+          // File dari HP Induk posko yang TIDAK ADA di HP ini (misal HP bekas
+          // HP Induk / posko lain): tidak bisa digabung. Langsung tawarkan
+          // KOSONGKAN & SIAPKAN (cadangan otomatis + password admin HP ini).
+          await _penyiapan();
         } else if (adminSiap || relawan) {
           final berkas = BerkasMasukService.ambil(JenisBerkas.sinkron);
           final ctx = _ctx;
@@ -182,6 +187,17 @@ class BukaBerkasMasuk {
     BerkasMasukService.simpan(berkas.name, berkas.bytes,
         bisa ? JenisBerkas.penyiapan : JenisBerkas.sinkron);
     return bisa;
+  }
+
+  /// File sinkron dari HP Induk untuk posko yang tidak ada di HP ini?
+  /// Kalau ya, file dialihkan ke Penyiapan (yang menawarkan kosongkan HP).
+  static Future<bool> _poskoLain() async {
+    final berkas = BerkasMasukService.ambil(JenisBerkas.sinkron);
+    if (berkas == null) return false;
+    final lain = await SinkronService.poskoTidakAdaDiHp(berkas.bytes);
+    BerkasMasukService.simpan(berkas.name, berkas.bytes,
+        lain ? JenisBerkas.penyiapan : JenisBerkas.sinkron);
+    return lain;
   }
 
   /// File terkunci yang namanya diubah: tanyakan jenisnya.

@@ -244,21 +244,22 @@ class SinkronOtomatis {
   // ---------------- KOSONGKAN HP ----------------
 
   /// HP ini tidak bisa langsung disiapkan ([alasan]). Tawarkan KOSONGKAN HP:
-  ///  1. admin/relawan yang sedang login tidak boleh (HP sedang dipakai);
-  ///  2. kalau ada admin dengan password sendiri, password itu diminta;
+  ///  1. relawan yang sedang login tidak boleh (bukan pemilik HP);
+  ///  2. kalau ada admin dengan password sendiri, password itu diminta
+  ///     (kecuali admin itu sedang login: password sudah diketik saat login);
   ///  3. cadangan seluruh data disimpan otomatis ke Download/LOGEVA;
   ///  4. baru data dihapus. Hasil true = HP sudah kosong.
   static Future<bool> _kosongkanHp(
       BuildContext context, String alasan, String namaPosko) async {
     final sesi = SessionService.instance;
     final admin = sesi.admin;
-    final sedangDipakai = sesi.relawan != null ||
-        (admin != null && !AdminRepository.instance.masihPasswordBawaan(admin));
-    if (sedangDipakai) {
-      await _gagal(context, '$alasan\n\nLogout dulu kalau HP ini memang mau '
-          'dipindahkan ke posko $namaPosko, lalu buka file ini lagi.');
+    if (sesi.relawan != null) {
+      await _gagal(context, '$alasan\n\nHanya admin HP ini yang bisa '
+          'mengosongkan HP. Logout, lalu buka file ini lagi.');
       return false;
     }
+    final adminLogin =
+        admin != null && !AdminRepository.instance.masihPasswordBawaan(admin);
 
     final isi = await PenyiapanService.isiHp();
     if (!context.mounted) return false;
@@ -281,7 +282,7 @@ class SinkronOtomatis {
     final pemilik = (await adminRepo.getAll())
         .where((a) => !adminRepo.masihPasswordBawaan(a))
         .toList();
-    if (pemilik.isNotEmpty) {
+    if (pemilik.isNotEmpty && !adminLogin) {
       String? salah;
       while (true) {
         if (!context.mounted) return false;

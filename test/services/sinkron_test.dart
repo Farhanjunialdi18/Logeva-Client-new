@@ -375,4 +375,24 @@ void main() {
     expect(baris['tanggal_lahir'], '');
     expect(baris['usia'], '72');
   });
+
+  test('file HP Induk posko lain dikenali (disiapkan ulang, bukan digabung)', () async {
+    final dariInduk = await kirimDari(induk);
+    expect(await SinkronService.poskoTidakAdaDiHp(dariInduk, store: a), isFalse,
+        reason: 'HP Anggota posko yang sama: digabung biasa');
+    expect(await SinkronService.poskoTidakAdaDiHp(await kirimDari(a), store: induk), isFalse,
+        reason: 'file HP Anggota tidak membawa akun');
+
+    // HP bekas: HP Induk dengan posko & admin sendiri.
+    final bekas = buka('hp_bekas');
+    await AdminRepository.withStore(bekas).ensureDefaultAdmin();
+    await PoskoRepository.withStore(bekas).add(Posko.baru(
+      nama: 'Posko Lain', namaDesa: 'X', alamat: 'Jl. 2',
+      luasLokasi: 100, latitude: '-6.8', longitude: '106.2',
+    ));
+    expect(await SinkronService.poskoTidakAdaDiHp(dariInduk, store: bekas), isTrue);
+    expect(await SinkronService.bisaMenyiapkan(dariInduk, store: bekas), isFalse,
+        reason: 'harus dikosongkan dulu');
+    await bekas.close();
+  });
 }
