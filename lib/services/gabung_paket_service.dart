@@ -309,7 +309,8 @@ class GabungPaketService {
     };
     final barisPengungsi = <BarisGabung>[];
     for (final r in isi['pengungsi.csv']!) {
-      barisPengungsi.add(await _pengungsi(s, r, dikenal, pengungsiLokal, simpan));
+      barisPengungsi.add(await _pengungsi(s, r, dikenal, pengungsiLokal, simpan,
+          dariWebsite: dariWebsite));
     }
 
     // ---- barang masuk / keluar ----
@@ -426,11 +427,26 @@ class GabungPaketService {
     Map<String, String> r,
     Map<String, int> dikenal,
     Map<String, Pengungsi> lokal,
-    bool simpan,
-  ) async {
+    bool simpan, {
+    bool dariWebsite = false,
+  }) async {
     final nama = r['nama'] ?? '-';
     final kode = r['kode'] ?? '';
     if (!KodeUnik.valid(kode)) return BarisGabung(BarisGabung.error, nama, 'Kode tidak valid');
+
+    // Pengungsi yang DIHAPUS DI WEBSITE (baris tanda hapus, tanpa biodata):
+    // ditandai dihapus di HP ini juga, lalu ikut ke HP Anggota saat sinkron.
+    // Yang tidak ada di HP ini dilewati (tidak dibuat).
+    if (dariWebsite && (r['dihapus_pada'] ?? '').isNotEmpty) {
+      final ada = lokal[kode];
+      if (ada == null || ada.isDihapus) {
+        return BarisGabung(BarisGabung.lewati, nama, 'Sudah dihapus di website');
+      }
+      if (simpan) {
+        await s.update(DatabaseTables.pengungsi, ada.id!, ada.tandaiDihapus().toMap());
+      }
+      return BarisGabung(BarisGabung.hapus, ada.nama, 'Dihapus di website');
+    }
     final poskoId = dikenal[r['kode_posko']];
     if (poskoId == null) {
       return BarisGabung(BarisGabung.lewati, nama, 'Posko tidak dikenal di HP ini');

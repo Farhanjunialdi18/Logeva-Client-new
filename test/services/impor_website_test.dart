@@ -16,6 +16,7 @@ import 'package:flutter_application_1/data/sqlite_table_store.dart';
 import 'package:flutter_application_1/models/posko.dart';
 import 'package:flutter_application_1/services/csv_service.dart';
 import 'package:flutter_application_1/services/gabung_paket_service.dart';
+import 'package:flutter_application_1/services/sinkron_service.dart';
 import 'package:flutter_application_1/services/paket_data_service.dart';
 import 'package:flutter_application_1/services/penyiapan_service.dart';
 import 'package:flutter_application_1/utils/berkas_terkunci.dart';
@@ -154,6 +155,51 @@ void main() {
     expect(inah.tanggalLahir, isNull);
     expect(inah.usia, 72);
     expect(inah.hanyaUsia, isTrue);
+  });
+
+  test('website -> HP admin -> HP relawan, termasuk yang dihapus di website', () async {
+    // 1. HP admin mengimpor paket website.
+    await GabungPaketService.terapkanWebsite(paketWebsite(), store: hp);
+    final posko = (await semuaPosko()).single;
+
+    // 2. HP relawan disiapkan dari HP admin, lalu menerima data gabungan.
+    final admin = AdminRepository.withStore(hp);
+    await admin.gantiPassword((await admin.getAll()).single, 'posko2026');
+    final anggota = SqliteTableStore(path: '${folder.path}/anggota.db', factory: databaseFactoryFfi);
+    final (_, siap) = await PenyiapanService.buat(posko, store: hp);
+    await PenyiapanService.terapkan(PenyiapanService.baca(siap), store: anggota);
+    await SinkronService.terapkan(
+        (await SinkronService.buatFile(posko, store: hp)).$2, store: anggota);
+    Future<Set<String>> nama(SqliteTableStore s) async =>
+        (await PengungsiRepository.withStore(s).getAll()).map((p) => p.nama).toSet();
+    expect(await nama(anggota), {'Siti', 'Ujang'});
+
+    // 3. Ujang dihapus di website: paket berikutnya membawa tanda hapus
+    //    (kode_posko kosong, tanpa biodata).
+    final hapus = paketWebsite(pengungsi: [
+      ['a1b2c3d4-0001-4000-8000-000000000001', _kodePosko, 'Siti', 'Cikaret', '1990-01-01',
+        '', '36', 'Perempuan', 'Sehat', 'Tidak', '', 'Raja', '2026-11-07 09:00:00',
+        '2026-11-07 09:00:00', '', 'di_posko', '', ''],
+      ['a1b2c3d4-0002-4000-8000-000000000002', '', '(dihapus di website)', '', '', '', '0',
+        'Laki-laki', 'Sehat', 'Tidak', '', '', '2026-11-08 10:00:00', '2026-11-08 10:00:00',
+        '2026-11-08 10:00:00', 'di_posko', '', ''],
+      // Tanda hapus untuk orang yang tidak pernah ada di HP ini: dilewati.
+      ['a1b2c3d4-0009-4000-8000-000000000009', '', '(dihapus di website)', '', '', '', '0',
+        'Laki-laki', 'Sehat', 'Tidak', '', '', '2026-11-08 10:00:00', '2026-11-08 10:00:00',
+        '2026-11-08 10:00:00', 'di_posko', '', ''],
+    ]);
+    final cek = await GabungPaketService.periksaWebsite(hapus, store: hp);
+    expect(cek.ringkasanPengungsi[BarisGabung.hapus], 1);
+    await GabungPaketService.terapkanWebsite(hapus, store: hp);
+    expect(await nama(hp), {'Siti'});
+    expect((await PengungsiRepository.withStore(hp).getAll(termasukDihapus: true)).length, 2,
+        reason: 'tanda hapus orang yang tidak dikenal tidak dibuat');
+
+    // 4. Sinkron ke HP relawan: Ujang ikut terhapus di sana.
+    await SinkronService.terapkan(
+        (await SinkronService.buatFile(posko, store: hp)).$2, store: anggota);
+    expect(await nama(anggota), {'Siti'});
+    await anggota.close();
   });
 
   test('impor ulang tidak dobel; data website yang lebih baru memperbarui posko', () async {
