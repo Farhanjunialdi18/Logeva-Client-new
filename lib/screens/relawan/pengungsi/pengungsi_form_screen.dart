@@ -23,6 +23,7 @@ import '../../../services/session_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../utils/app_snackbar.dart';
+import '../../../utils/kondisi_kesehatan.dart';
 import '../../../utils/pengingat_setor.dart';
 import '../../../utils/tanggal.dart';
 import '../../../utils/validators.dart';
@@ -64,6 +65,10 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
   String _jenisKelamin = DataOptions.lakiLaki;
   String _rentan = DataOptions.bukanRentan;
 
+  /// Kondisi kesehatan: pilihan + keterangan ([_kondisi]). null = teks lama
+  /// yang bukan pilihan (wajib dipilih ulang saat disimpan).
+  String? _kondisiPilihan = KondisiKesehatan.sehat;
+
   /// Admin memilih posko; relawan memakai posko tugasnya.
   bool get _pilihPosko => SessionService.instance.relawan == null;
   List<Posko> _daftarPosko = [];
@@ -83,11 +88,9 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
     _modeUmur = e != null && e.hanyaUsia ? _modeUsia : _modeLahir;
     _usia = TextEditingController(text: e != null && e.hanyaUsia ? '${e.usia}' : '');
     _kk = TextEditingController(text: e?.nomorKk ?? '');
-    _kondisi = TextEditingController(
-      text: e == null || e.kondisiKesehatan == DataOptions.kondisiSehat
-          ? ''
-          : e.kondisiKesehatan,
-    );
+    final kondisi = KondisiKesehatan.pisah(e?.kondisiKesehatan ?? '');
+    _kondisiPilihan = kondisi.pilihan;
+    _kondisi = TextEditingController(text: kondisi.keterangan);
     _riwayat = TextEditingController(text: e?.riwayatPenyakit ?? '');
     _poskoTeks =
         TextEditingController(text: SessionService.instance.poskoLabel);
@@ -145,7 +148,7 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
             usia: usia,
             jenisKelamin: _jenisKelamin,
             nomorKk: kk,
-            kondisiKesehatan: _kondisi.text,
+            kondisiKesehatan: _teksKondisi,
             kelompokRentan: _rentan,
             riwayatPenyakit: _riwayat.text.trim(),
             dicatatOleh: SessionService.instance.namaPencatat,
@@ -158,7 +161,7 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
             usia: usia,
             jenisKelamin: _jenisKelamin,
             nomorKk: kk,
-            kondisiKesehatan: _kondisi.text,
+            kondisiKesehatan: _teksKondisi,
             kelompokRentan: _rentan,
             riwayatPenyakit: _riwayat.text.trim(),
           );
@@ -194,6 +197,14 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
       setState(() => _saving = false);
       AppSnackbar.show(context, 'Gagal menyimpan: $e', isError: true);
     }
+  }
+
+  /// Sehat tidak memakai keterangan (kolomnya disembunyikan).
+  String get _teksKondisi {
+    final pilihan = _kondisiPilihan ?? KondisiKesehatan.sehat;
+    return pilihan == KondisiKesehatan.sehat
+        ? pilihan
+        : KondisiKesehatan.gabung(pilihan, _kondisi.text);
   }
 
   Widget _poskoField() {
@@ -340,12 +351,23 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              AppTextField(
-                label: 'KONDISI KESEHATAN',
-                hint: 'Contoh: Demam, Luka ringan. Kosong = Sehat',
-                controller: _kondisi,
-                textCapitalization: TextCapitalization.sentences,
+              AppDropdownField(
+                label: 'KONDISI KESEHATAN *',
+                value: _kondisiPilihan,
+                items: KondisiKesehatan.pilihan,
+                hint: 'Pilih kondisi',
+                onChanged: (v) => setState(() => _kondisiPilihan = v),
+                validator: (v) => v == null ? 'Pilih kondisi kesehatan.' : null,
               ),
+              if (_kondisiPilihan != KondisiKesehatan.sehat) ...[
+                const SizedBox(height: 12),
+                AppTextField(
+                  label: 'KETERANGAN KONDISI (OPSIONAL)',
+                  hint: 'Contoh: demam, diare, luka di kaki',
+                  controller: _kondisi,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+              ],
               const SizedBox(height: 16),
 
               AppDropdownField(

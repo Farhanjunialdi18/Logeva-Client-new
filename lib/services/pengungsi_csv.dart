@@ -10,6 +10,7 @@
 
 import '../core/data_options.dart';
 import '../models/pengungsi.dart';
+import '../utils/kondisi_kesehatan.dart';
 import '../utils/tanggal.dart';
 import '../utils/validators.dart';
 import '../utils/waktu_wib.dart';
@@ -146,6 +147,9 @@ class PengungsiCsv {
     return '';
   }
 
+  static String? _kondisi(String? teks) =>
+      teks == null ? null : KondisiKesehatan.rapikan(teks);
+
   /// Teks dirapikan: spasi ganda jadi satu, null kalau kosong.
   static String? _teks(String v) {
     final t = v.trim().replaceAll(RegExp(r'\s+'), ' ');
@@ -239,7 +243,8 @@ class PengungsiCsv {
       usia: lahirValid == null ? usiaValid : null,
       jenisKelamin: jk ?? DataOptions.lakiLaki,
       nomorKk: kk,
-      kondisiKesehatan: _teks(_ambil(row, 'kondisi_kesehatan')),
+      // Pilihan diseragamkan ("sakit ringan - demam" -> "Sakit ringan - demam").
+      kondisiKesehatan: _kondisi(_teks(_ambil(row, 'kondisi_kesehatan'))),
       kelompokRentan: rentan,
       riwayatPenyakit: _teks(_ambil(row, 'riwayat_penyakit')),
       error: error,

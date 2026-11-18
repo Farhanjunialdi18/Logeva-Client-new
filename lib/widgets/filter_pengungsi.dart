@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../utils/kondisi_kesehatan.dart';
 import '../core/data_options.dart';
 import '../models/pengungsi.dart';
 import '../services/kebutuhan_service.dart';
@@ -67,7 +68,9 @@ class SaringPengungsi {
     final cocokSehat = switch (kesehatan) {
       sehat => !KebutuhanService.isSakit(e),
       perluPerhatian => KebutuhanService.isSakit(e),
-      _ => true,
+      semuaPilihan => true,
+      // Sakit ringan / Sakit berat / Perlu rujukan
+      _ => KondisiKesehatan.pisah(e.kondisiKesehatan).pilihan == kesehatan,
     };
     return cocokKeberadaan && cocokRentan && cocokJk && cocokSehat;
   }
@@ -145,6 +148,9 @@ class _FilterPengungsiState extends State<FilterPengungsi> {
               SaringPengungsi.semuaPilihan,
               SaringPengungsi.sehat,
               SaringPengungsi.perluPerhatian,
+              KondisiKesehatan.sakitRingan,
+              KondisiKesehatan.sakitBerat,
+              KondisiKesehatan.perluRujukan,
             ],
             onChanged: (v) => widget.onChanged(n.salin(kesehatan: v)),
           ),

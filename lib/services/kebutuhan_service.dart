@@ -14,6 +14,7 @@
 // File ini tidak membaca database: semua masukan diberikan pemanggil.
 // ============================================================
 
+import '../utils/kondisi_kesehatan.dart';
 import 'dart:math';
 
 import '../core/data_options.dart';
@@ -330,18 +331,22 @@ class KebutuhanService {
   // ---------------- PERHATIAN MEDIS ----------------
 
   /// Sakit = kondisi kesehatan selain kosong, "-", "sehat", "baik".
-  static bool isSakit(Pengungsi p) => !const ['', '-', 'sehat', 'baik']
-      .contains(p.kondisiKesehatan.trim().toLowerCase());
+  /// Sakit = kondisi selain Sehat (pilihan Sakit ringan/berat/Perlu
+  /// rujukan, atau teks lama selain "sehat"/"baik"/"-").
+  static bool isSakit(Pengungsi p) =>
+      KondisiKesehatan.pisah(p.kondisiKesehatan).pilihan != KondisiKesehatan.sehat;
 
   /// Pengungsi yang sakit, punya riwayat penyakit, atau kelompok rentan.
-  /// Yang sakit di atas, lalu usia tertua.
+  /// Paling gawat di atas (Perlu rujukan, Sakit berat, Sakit ringan), lalu
+  /// usia tertua.
   static List<Pengungsi> perhatianMedis(List<Pengungsi> pengungsi) {
     final list = pengungsi
         .where((p) =>
             isSakit(p) || p.riwayatPenyakit.trim().isNotEmpty || p.isRentan)
         .toList();
     list.sort((a, b) {
-      final s = (isSakit(b) ? 1 : 0) - (isSakit(a) ? 1 : 0);
+      final s = KondisiKesehatan.tingkat(b.kondisiKesehatan) -
+          KondisiKesehatan.tingkat(a.kondisiKesehatan);
       return s != 0 ? s : b.usia.compareTo(a.usia);
     });
     return list;
