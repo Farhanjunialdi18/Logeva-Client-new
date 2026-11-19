@@ -60,6 +60,9 @@ class AppTextStyles {
       );
 
   static TextStyle input(AppPalette p) => TextStyle(
+        // Sama dengan font bawaan Android; ditulis eksplisit supaya teks di
+        // dropdown/kolom isian juga benar di render uji (tangkapan layar).
+        fontFamily: 'Roboto',
         fontSize: 14,
         color: p.textPrimary,
       );

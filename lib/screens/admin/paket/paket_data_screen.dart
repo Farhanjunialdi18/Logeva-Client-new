@@ -204,16 +204,20 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
                 message: 'Belum ada posko. Tambahkan posko di menu Data Posko.',
               )
             else ...[
-              AppDropdownField(
-                label: 'POSKO',
-                value: _pilihan,
-                items: [_semuaPosko, ..._daftarPosko.map((p) => p.nama)],
-                onChanged: (v) {
-                  setState(() => _pilihan = v ?? _semuaPosko);
-                  _hitung();
-                },
-              ),
-              const SizedBox(height: 16),
+              // Satu HP admin = satu posko: pilihan posko hanya kalau HP ini
+              // (masih) berisi beberapa posko.
+              if (_daftarPosko.length > 1) ...[
+                AppDropdownField(
+                  label: 'POSKO',
+                  value: _pilihan,
+                  items: [_semuaPosko, ..._daftarPosko.map((p) => p.nama)],
+                  onChanged: (v) {
+                    setState(() => _pilihan = v ?? _semuaPosko);
+                    _hitung();
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
 
               if (paket != null)
                 InfoCard(
