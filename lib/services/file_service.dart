@@ -37,6 +37,13 @@ class BerkasFlashdisk {
   });
 }
 
+/// Folder file masuk di HP yang sudah diizinkan (Quick Share, Bluetooth, ...).
+class FolderHp {
+  final String uri;
+  final String nama;
+  const FolderHp({required this.uri, required this.nama});
+}
+
 /// Hasil daftar flashdisk: file dipilih, batal, atau "cari di HP saja".
 class HasilFlashdisk {
   final ({String name, Uint8List bytes})? berkas;
@@ -85,6 +92,37 @@ class FileService {
   /// Tampilan daftar file flashdisk (diisi widgets/pilih_dari_flashdisk.dart
   /// saat aplikasi mulai, karena service tidak punya BuildContext).
   static Future<HasilFlashdisk> Function(List<String> ekstensi)? pemilihFlashdisk;
+
+  /// Tampilan daftar file di folder HP (widgets/pilih_dari_hp.dart).
+  /// Hasil cariDiHp = buka pemilih file Android biasa.
+  static Future<HasilFlashdisk> Function(List<String> ekstensi)? pemilihHp;
+
+  /// Daftar file di folder HP yang sudah diizinkan, terbaru di atas.
+  static Future<({List<FolderHp> folder, List<BerkasFlashdisk> berkas})> daftarFolderHp(
+      List<String> ekstensi) async {
+    final m = await _kanal.invokeMapMethod<String, Object?>('daftarFolderHp', {'ekstensi': ekstensi});
+    final folder = [
+      for (final f in (m?['folder'] as List?) ?? const [])
+        FolderHp(uri: (f as Map)['uri'] as String, nama: f['nama'] as String),
+    ];
+    final berkas = [
+      for (final b in (m?['berkas'] as List?) ?? const [])
+        BerkasFlashdisk(
+          nama: (b as Map)['nama'] as String,
+          folder: b['folder'] as String? ?? '',
+          uri: b['uri'] as String,
+          ukuran: (b['ukuran'] as num?)?.toInt() ?? 0,
+          waktu: DateTime.fromMillisecondsSinceEpoch((b['waktu'] as num?)?.toInt() ?? 0),
+        ),
+    ];
+    return (folder: folder, berkas: berkas);
+  }
+
+  /// Pilih (sekali) folder file masuk. Hasil: nama folder, null = batal.
+  static Future<String?> izinFolderHp() => _kanal.invokeMethod<String>('izinFolderHp');
+
+  static Future<void> hapusFolderHp(FolderHp f) =>
+      _kanal.invokeMethod<void>('hapusFolderHp', {'uri': f.uri});
 
   /// Flashdisk (USB OTG) sedang tercolok?
   static Future<bool> adaFlashdisk() async {
@@ -143,7 +181,19 @@ class FileService {
       final hasil = await pemilih(ekstensi);
       if (hasil.batal) return null;
       if (hasil.berkas != null) return hasil.berkas;
-      // pengguna memilih "cari di HP": lanjut ke pemilih biasa
+      // pengguna memilih "cari di HP": lanjut ke daftar folder HP
+    }
+    // Daftar file dari folder file masuk (tanpa pemilih file Android).
+    final pemilihDiHp = pemilihHp;
+    if (_android && pemilihDiHp != null) {
+      try {
+        final hasil = await pemilihDiHp(ekstensi);
+        if (hasil.batal) return null;
+        if (hasil.berkas != null) return hasil.berkas;
+        // "cari manual": lanjut ke pemilih biasa
+      } on MissingPluginException {
+        // lanjut ke pemilih biasa
+      }
     }
     if (_android) {
       try {

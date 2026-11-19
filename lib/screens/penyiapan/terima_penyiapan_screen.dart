@@ -109,7 +109,7 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
                       )
                     : const Icon(Icons.folder_open_rounded,
                         size: 18, color: AppColors.primary),
-                label: const Text('Atau pilih file manual'),
+                label: const Text('Pilih file yang sudah diterima'),
               ),
             ),
             const SizedBox(height: 24),

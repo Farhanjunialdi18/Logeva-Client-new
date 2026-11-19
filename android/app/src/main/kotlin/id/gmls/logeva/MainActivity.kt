@@ -35,6 +35,8 @@ class MainActivity : FlutterActivity() {
     private val kanal = "id.gmls.logeva/unduhan"
     private val kodePilih = 4107
     private val kodeFlashdisk = 4108
+    private val kodeFolderHp = 4109
+    private var hasilFolderHp: MethodChannel.Result? = null
     private var tundaIzin: TundaIzin? = null
 
     /** Menunggu layar izin flashdisk; [lanjut] dijalankan setelah diizinkan. */
@@ -88,6 +90,30 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "adaFlashdisk" -> result.success(flashdisk() != null)
+                // ---- FOLDER FILE MASUK di HP (Quick Share / Bluetooth / WhatsApp) ----
+                "izinFolderHp" -> mintaIzinFolderHp(result)
+                "daftarFolderHp" -> {
+                    val ekstensi = call.argument<List<String>>("ekstensi") ?: emptyList()
+                    Thread {
+                        try {
+                            val hasil = daftarFolderHp(ekstensi)
+                            runOnUiThread { result.success(hasil) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("GAGAL", e.message, null) }
+                        }
+                    }.start()
+                }
+                "hapusFolderHp" -> {
+                    val uri = call.argument<String>("uri")?.let { Uri.parse(it) }
+                    try {
+                        if (uri != null) contentResolver.releasePersistableUriPermission(
+                            uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    } catch (e: Exception) {
+                        // abaikan
+                    }
+                    result.success(null)
+                }
                 "daftarFlashdisk" -> {
                     val ekstensi = call.argument<List<String>>("ekstensi") ?: emptyList()
                     denganFlashdisk(result) { tree, _ -> daftarFlashdisk(tree, ekstensi) }
@@ -202,6 +228,74 @@ class MainActivity : FlutterActivity() {
         contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
             if (it.moveToFirst()) it.getString(0) else null
         }
+
+    // ---------------- FOLDER FILE MASUK DI HP ----------------
+    // Pengguna memilih SEKALI folder tempat file masuk (misal Download/Quick
+    // Share, Download/Bluetooth, folder dokumen WhatsApp). Izin baca disimpan,
+    // lalu LOGEVA menampilkan sendiri daftar file di folder itu, terbaru di
+    // atas, tanpa pemilih file Android.
+
+    private fun mintaIzinFolderHp(result: MethodChannel.Result) {
+        if (hasilFolderHp != null) {
+            result.error("SIBUK", "Pemilih folder sedang terbuka", null)
+            return
+        }
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                putExtra(
+                    DocumentsContract.EXTRA_INITIAL_URI,
+                    DocumentsContract.buildDocumentUri(
+                        "com.android.externalstorage.documents", "primary:Download"
+                    )
+                )
+            }
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        hasilFolderHp = result
+        try {
+            startActivityForResult(intent, kodeFolderHp)
+        } catch (e: Exception) {
+            hasilFolderHp = null
+            result.error("GAGAL", e.message, null)
+        }
+    }
+
+    /** Nama folder yang mudah dibaca, misal "Download/Quick Share". */
+    private fun namaFolder(tree: Uri): String = try {
+        DocumentsContract.getTreeDocumentId(tree).substringAfter(':').ifEmpty { "Penyimpanan HP" }
+    } catch (e: Exception) {
+        "Folder"
+    }
+
+    /** Folder HP yang sudah diizinkan (bukan flashdisk). */
+    private fun folderHp(): List<Uri> = contentResolver.persistedUriPermissions
+        .filter { it.isReadPermission }
+        .map { it.uri }
+        .filter {
+            try {
+                DocumentsContract.getTreeDocumentId(it).startsWith("primary:")
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+    private fun daftarFolderHp(ekstensi: List<String>): Map<String, Any> {
+        val folder = folderHp()
+        val berkas = mutableListOf<Map<String, Any>>()
+        val nama = mutableListOf<Map<String, String>>()
+        for (tree in folder) {
+            nama.add(mapOf("uri" to tree.toString(), "nama" to namaFolder(tree)))
+            try {
+                berkas.addAll(daftarFlashdisk(tree, ekstensi).map { it + ("folder" to namaFolder(tree)) })
+            } catch (e: Exception) {
+                // folder sudah dihapus / izin dicabut: lewati
+            }
+        }
+        return mapOf(
+            "folder" to nama,
+            "berkas" to berkas.sortedByDescending { it["waktu"] as Long },
+        )
+    }
 
     // ---------------- FLASHDISK (USB OTG) ----------------
 
@@ -420,6 +514,22 @@ class MainActivity : FlutterActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == kodeFlashdisk) {
             hasilIzinFlashdisk(resultCode, data)
+            return
+        }
+        if (requestCode == kodeFolderHp) {
+            val result = hasilFolderHp ?: return
+            hasilFolderHp = null
+            val uri = data?.data
+            if (resultCode != Activity.RESULT_OK || uri == null) {
+                result.success(null)
+                return
+            }
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: Exception) {
+                // tetap bisa dipakai sekali ini
+            }
+            result.success(namaFolder(uri))
             return
         }
         if (requestCode != kodePilih) return

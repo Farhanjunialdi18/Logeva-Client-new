@@ -15,6 +15,7 @@ import 'services/peringatan_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
 import 'widgets/pilih_dari_flashdisk.dart';
+import 'widgets/pilih_dari_hp.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,7 @@ Future<void> main() async {
   // Impor: kalau flashdisk tercolok, tampilkan daftar file flashdisk
   // (tanpa pemilih file Android).
   PilihDariFlashdisk.pasang();
+  PilihDariHp.pasang();
 }
 
 class LogevaApp extends StatelessWidget {

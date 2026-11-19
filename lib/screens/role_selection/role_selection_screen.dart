@@ -1,7 +1,8 @@
 // ============================================================
 // role_selection_screen.dart
-// HALAMAN AWAL: pilih masuk sebagai ADMIN atau RELAWAN, atau siapkan
-// HP ini sebagai HP Anggota dari File Penyiapan HP Induk.
+// HALAMAN AWAL: pilih masuk sebagai ADMIN atau RELAWAN. Tautan "HP baru /
+// pindah posko?" berisi: buka file dari HP admin (HP relawan) dan pulihkan
+// HP pengganti dari cadangan (HP admin yang rusak/hilang).
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -89,39 +90,68 @@ class RoleSelectionScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: AppTextStyles.small(p),
                     ),
-                    if (!anggota)
-                      TextButton.icon(
-                        onPressed: () => Navigator.pushNamed(
-                            context, AppRoutes.terimaPenyiapan),
-                        icon: const Icon(Icons.install_mobile_rounded,
-                            size: 18, color: AppColors.primary),
-                        label: const Text(
-                          'Buka file dari HP admin',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    // Dua jalan untuk HP baru dirapikan jadi satu tautan.
+                    TextButton.icon(
+                      onPressed: () => _bantuanHp(context, anggota),
+                      icon: const Icon(Icons.install_mobile_rounded,
+                          size: 18, color: AppColors.primary),
+                      label: const Text(
+                        'HP baru / pindah posko?',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    if (!anggota)
-                      TextButton.icon(
-                        onPressed: () => Navigator.pushNamed(
-                            context, AppRoutes.pulihkanCadangan),
-                        icon: Icon(Icons.restore_rounded,
-                            size: 18, color: p.textSecondary),
-                        label: Text(
-                          'Pulihkan HP pengganti dari cadangan',
-                          style: TextStyle(
-                            color: p.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _bantuanHp(BuildContext context, bool anggota) {
+    final p = AppPalette.of(context);
+    Widget pilihan(IconData ikon, String judul, String ket, String rute) => ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(ikon, color: AppColors.primary),
+          title: Text(judul, style: AppTextStyles.cardTitle(p)),
+          subtitle: Text(ket, style: AppTextStyles.small(p)),
+          trailing: Icon(Icons.chevron_right_rounded, color: p.textSecondary),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.pushNamed(context, rute);
+          },
+        );
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('HP baru / pindah posko', style: AppTextStyles.sectionTitle(p)),
+              const SizedBox(height: 4),
+              Text(
+                'Cara utama: ketuk file yang diterima → Buka dengan LOGEVA. '
+                'Pakai pilihan ini kalau cara itu tidak bisa.',
+                style: AppTextStyles.small(p),
+              ),
+              const SizedBox(height: 8),
+              pilihan(Icons.folder_zip_rounded, 'Buka file dari HP admin',
+                  'HP relawan: pasang akun & data posko dari file kiriman admin',
+                  AppRoutes.terimaPenyiapan),
+              if (!anggota)
+                pilihan(Icons.restore_rounded, 'Pulihkan HP pengganti',
+                    'HP admin rusak/hilang: pulihkan semua data dari file cadangan',
+                    AppRoutes.pulihkanCadangan),
+            ],
+          ),
         ),
       ),
     );
