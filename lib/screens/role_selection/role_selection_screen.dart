@@ -96,7 +96,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         icon: const Icon(Icons.install_mobile_rounded,
                             size: 18, color: AppColors.primary),
                         label: const Text(
-                          'Siapkan HP ini dari HP Induk',
+                          'Buka file dari HP admin',
                           style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,

@@ -10,6 +10,7 @@ import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
 import '../../../theme/theme_controller.dart';
 import '../../../widgets/app_background.dart';
+import '../../../widgets/kosongkan_hp.dart';
 import '../../../widgets/logout_button.dart';
 import '../../../widgets/menu_card.dart';
 import '../../../widgets/page_header.dart';
@@ -119,6 +120,14 @@ class AdminSettingsScreen extends StatelessWidget {
             title: 'Cadangan & Pemulihan',
             description: 'Cadangkan semua data, pulihkan di HP pengganti',
             onTap: () => buka(const CadanganScreen()),
+          ),
+          const SizedBox(height: 12),
+          MenuCard(
+            icon: Icons.delete_forever_rounded,
+            iconColor: AppColors.error,
+            title: 'Kosongkan HP ini',
+            description: 'Hapus semua data (cadangan otomatis), untuk pindah posko',
+            onTap: () => KosongkanHp.jalankan(context),
           ),
 
           // ---- APLIKASI ----

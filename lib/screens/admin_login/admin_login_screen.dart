@@ -73,7 +73,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'Hubungi admin lain atau koordinator GMLS untuk reset password.',
+          'Satu HP posko hanya punya satu admin, jadi password tidak bisa '
+          'direset dari HP lain. Hubungi koordinator GMLS.',
         ),
       ),
     );

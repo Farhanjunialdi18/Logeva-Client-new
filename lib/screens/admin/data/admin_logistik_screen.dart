@@ -42,7 +42,7 @@ class _AdminLogistikScreenState extends State<AdminLogistikScreen> {
   }
 
   Future<void> _load() async {
-    final posko = await PoskoRepository.instance.getAll()
+    final posko = await PoskoRepository.instance.getDipakai()
       ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
     if (!mounted) return;
     setState(() {

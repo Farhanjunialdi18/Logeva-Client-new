@@ -1,8 +1,9 @@
 // ============================================================
 // terima_penyiapan_screen.dart
-// SIAPKAN HP INI DARI HP INDUK (di HP Anggota). Cara utama TANPA mencari
-// file: admin menekan BAGIKAN di HP Induk, lalu di HP ini file ZIP yang
-// diterima diketuk -> Buka dengan LOGEVA -> YA, SINKRONKAN.
+// BUKA FILE DARI HP ADMIN (di HP relawan). Tidak ada fitur penyiapan
+// terpisah: file sinkron dari HP admin (Relawan -> BAGIKAN KE HP RELAWAN,
+// atau Sinkron -> KIRIM KE HP ANGGOTA) sekaligus memasang akun & data posko.
+// Cara utama TANPA mencari file: ketuk file -> Buka dengan LOGEVA.
 // Halaman ini hanya petunjuk + jalan cadangan memilih file manual.
 // Proses sebenarnya ada di widgets/sinkron_otomatis.dart.
 // ============================================================
@@ -69,7 +70,7 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             PageHeader(
-              title: 'Siapkan dari HP Induk',
+              title: 'Buka File dari HP Admin',
               subtitle: 'Untuk HP relawan (HP Anggota)',
               onBack: () => Navigator.of(context).pop(),
             ),
@@ -78,8 +79,9 @@ class _TerimaPenyiapanScreenState extends State<TerimaPenyiapanScreen> {
               title: 'CARA PAKAI (TANPA CARI FILE)',
               langkah: [
                 'Nyalakan Bluetooth di HP ini.',
-                'Minta admin: Relawan → pilih nama Anda → BAGIKAN KE HP RELAWAN '
-                    '→ Bluetooth / Quick Share → pilih HP ini.',
+                'Minta admin mengirim file: Relawan → pilih nama Anda → BAGIKAN '
+                    'KE HP RELAWAN (atau Sinkron → KIRIM KE HP ANGGOTA) → '
+                    'Bluetooth / Quick Share → pilih HP ini.',
                 'Terima file di HP ini, lalu KETUK NOTIFIKASI file yang masuk '
                     '→ Buka dengan LOGEVA.',
                 'Tekan YA, SINKRONKAN, tunggu sampai selesai, lalu login '

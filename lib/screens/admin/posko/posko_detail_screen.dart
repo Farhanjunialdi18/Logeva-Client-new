@@ -27,7 +27,6 @@ import '../../ringkasan/ringkasan_posko_screen.dart';
 import '../../../services/perangkat_service.dart';
 import '../../../widgets/dikelola_induk_banner.dart';
 import 'posko_form_screen.dart';
-import 'siapkan_anggota_screen.dart';
 
 class PoskoDetailScreen extends StatefulWidget {
   final int poskoId;
@@ -270,17 +269,6 @@ class _PoskoDetailScreenState extends State<PoskoDetailScreen> {
               if (PerangkatService.isAnggota)
                 const DikelolaIndukBanner()
               else ...[
-                SecondaryButton(
-                  text: 'SIAPKAN HP ANGGOTA',
-                  icon: Icons.install_mobile_rounded,
-                  height: 54,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SiapkanAnggotaScreen(posko: posko),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 SecondaryButton(
                   text: 'EDIT POSKO',
                   height: 54,

@@ -102,7 +102,7 @@ class _PengungsiFormScreenState extends State<PengungsiFormScreen> {
   }
 
   Future<void> _loadPosko() async {
-    final posko = await PoskoRepository.instance.getAll();
+    final posko = await PoskoRepository.instance.getDipakai();
     posko.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
     if (!mounted) return;
     setState(() => _daftarPosko = posko);

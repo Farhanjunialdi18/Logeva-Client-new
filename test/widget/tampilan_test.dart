@@ -23,6 +23,8 @@ import 'package:flutter_application_1/screens/admin/data/admin_logistik_screen.d
 import 'package:flutter_application_1/screens/admin/data/admin_pengungsi_screen.dart';
 import 'package:flutter_application_1/screens/admin/kelola_relawan/relawan_akun_detail_screen.dart';
 import 'package:flutter_application_1/screens/admin/paket/paket_data_screen.dart';
+import 'package:flutter_application_1/screens/admin/posko/atur_posko_hp_screen.dart';
+import 'package:flutter_application_1/screens/admin/akun/akun_admin_screen.dart';
 import 'package:flutter_application_1/screens/sinkron/log_setor_screen.dart';
 import 'package:flutter_application_1/screens/admin/posko/kelola_posko_screen.dart';
 import 'package:flutter_application_1/screens/admin/posko/posko_detail_screen.dart';
@@ -41,9 +43,7 @@ import 'package:flutter_application_1/screens/laporan/laporan_harian_screen.dart
 import 'package:flutter_application_1/screens/relawan/info/info_posko_screen.dart';
 import 'package:flutter_application_1/screens/relawan/pengungsi/catat_keluar_screen.dart';
 import 'package:flutter_application_1/screens/ringkasan/ringkasan_posko_screen.dart';
-import 'package:flutter_application_1/screens/admin/kelola_admin/kelola_admin_screen.dart';
 import 'package:flutter_application_1/screens/admin/kelola_relawan/kelola_relawan_screen.dart';
-import 'package:flutter_application_1/screens/admin/posko/siapkan_anggota_screen.dart';
 import 'package:flutter_application_1/screens/admin/settings/kata_sandi_posko_screen.dart';
 import 'package:flutter_application_1/screens/admin/settings/keamanan_screen.dart';
 import 'package:flutter_application_1/screens/penyiapan/terima_penyiapan_screen.dart';
@@ -209,15 +209,14 @@ void main() {
   // ---------------- HP INDUK / ANGGOTA (Tahap B) ----------------
   layar('Layar awal', () async => const RoleSelectionScreen());
   layar('Layar awal', () async => const RoleSelectionScreen(), hpAnggota: true);
-  layar('Siapkan HP Anggota', () async => SiapkanAnggotaScreen(posko: await posko()),
-      sebagaiAdmin: true);
-  layar('Siapkan dari HP Induk', () async => const TerimaPenyiapanScreen());
+  layar('Buka file dari HP admin', () async => const TerimaPenyiapanScreen());
   for (final (nama, buat) in <(String, Future<Widget> Function())>[
     ('Detail posko', () async => const PoskoDetailScreen(poskoId: 1)),
+    ('Atur posko HP', () async => const AturPoskoHpScreen()),
+    ('Akun admin posko', () async => AkunAdminScreen(onBack: () {})),
     ('Data posko', () async => const KelolaPoskoScreen()),
     ('Kelola relawan', () async => KelolaRelawanScreen(onBack: () {})),
     ('Detail relawan', () async => const RelawanAkunDetailScreen(relawanId: 1)),
-    ('Kelola admin', () async => KelolaAdminScreen(onBack: () {})),
     ('Keamanan', () async => const KeamananScreen()),
     ('Master barang', () async => const MasterBarangScreen()),
   ]) {

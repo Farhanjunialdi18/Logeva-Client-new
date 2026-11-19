@@ -95,7 +95,7 @@ class DashboardService {
     DateTime? sekarang,
   }) async {
     final s = store ?? LocalDatabase.store;
-    final semuaPosko = await PoskoRepository.withStore(s).getAll();
+    final semuaPosko = await PoskoRepository.withStore(s).getDipakai();
     final cakupan = poskoId == null
         ? semuaPosko
         : semuaPosko.where((p) => p.id == poskoId).toList();

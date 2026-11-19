@@ -71,7 +71,7 @@ class RingkasanPoskoService {
   static Future<List<RingkasanPosko>> poskoBeroperasi({TableStore? store}) async {
     final s = store ?? LocalDatabase.store;
     final hasil = <RingkasanPosko>[];
-    for (final p in await PoskoRepository.withStore(s).getAll()) {
+    for (final p in await PoskoRepository.withStore(s).getDipakai()) {
       if (p.isBeroperasi) hasil.add(await muat(p, store: s));
     }
     hasil.sort((a, b) => KebutuhanService.bandingkan(a.bantuan, b.bantuan));

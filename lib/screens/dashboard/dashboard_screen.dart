@@ -65,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _load() async {
-    final posko = await PoskoRepository.instance.getAll();
+    final posko = await PoskoRepository.instance.getDipakai();
     final data = await DashboardService.muat(poskoId: _poskoId);
     if (!mounted) return;
     setState(() {

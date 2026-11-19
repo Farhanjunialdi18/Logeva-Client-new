@@ -64,7 +64,7 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
   bool _adaKataSandi = true;
 
   Future<void> _load() async {
-    final posko = await PoskoRepository.instance.getAll()
+    final posko = await PoskoRepository.instance.getDipakai()
       ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
     final kataSandi = await PengaturanRepository.instance.kataSandiBerkas();
     if (!mounted) return;

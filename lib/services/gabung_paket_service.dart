@@ -238,10 +238,28 @@ class GabungPaketService {
     final dikenal = <String, int>{}; // kode_posko di paket -> id lokal
     final barisPosko = <BarisGabung>[];
     var idSementara = -1; // posko baru saat pratinjau (belum disimpan)
+
+    // Satu HP admin = satu posko. Dari website hanya posko HP ini yang
+    // diambil; HP yang belum punya posko hanya menerima paket 1 posko.
+    final poskoHp = dariWebsite ? await poskoRepo.poskoHp() : null;
+    if (dariWebsite && poskoHp == null && isi['posko.csv']!.length > 1) {
+      throw GabungException('Paket ini berisi ${isi['posko.csv']!.length} posko. '
+          'Satu HP admin hanya untuk satu posko: di website, ekspor 1 posko saja '
+          '(posko tempat Anda bertugas).');
+    }
+
     for (final r in isi['posko.csv']!) {
       final kode = r['kode_posko'] ?? '';
       final nama = (r['nama_lokasi'] ?? '').trim();
       final diubah = WaktuWib.baca(r['diubah_pada']);
+      if (poskoHp != null &&
+          kode != poskoHp.kode &&
+          !(_kunci(nama) == _kunci(poskoHp.nama) &&
+              _kunci(r['nama_desa'] ?? '') == _kunci(poskoHp.namaDesa))) {
+        barisPosko.add(BarisGabung(BarisGabung.lewati, nama.isEmpty ? '-' : nama,
+            'Bukan posko HP ini (HP ini: ${poskoHp.nama}, desa ${poskoHp.namaDesa})'));
+        continue;
+      }
       var ada = lokal[kode];
       var sambung = false;
 
@@ -266,7 +284,7 @@ class GabungPaketService {
       if (ada == null) {
         if (!dariWebsite) {
           barisPosko.add(BarisGabung(BarisGabung.lewati, nama.isEmpty ? '-' : nama,
-              'Posko tidak dikenal di HP ini (siapkan HP itu dari HP Induk posko ini)'));
+              'Posko tidak dikenal di HP ini (HP ini harus menerima file dari HP admin posko itu dulu)'));
           continue;
         }
         if (!KodeUnik.valid(kode) || nama.isEmpty || diubah == null) {

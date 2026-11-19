@@ -10,12 +10,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../routes/buka_berkas_masuk.dart';
+import '../../services/perangkat_service.dart';
 import '../../widgets/admin_bottom_nav.dart';
 import '../relawan/logout/logout_dialog.dart';
+import 'akun/akun_admin_screen.dart';
 import 'beranda/admin_beranda_screen.dart';
 import 'data/admin_data_menu_screen.dart';
-import 'kelola_admin/kelola_admin_screen.dart';
 import 'kelola_relawan/kelola_relawan_screen.dart';
+import 'posko/atur_posko_hp_screen.dart';
 import 'settings/admin_settings_screen.dart';
 
 class AdminShellScreen extends StatefulWidget {
@@ -27,6 +29,7 @@ class AdminShellScreen extends StatefulWidget {
 
 class _AdminShellScreenState extends State<AdminShellScreen> {
   // Urutan tab (harus sama dengan urutan di AdminBottomNav)
+  // Tab Admin = AKUN ADMIN POSKO (satu posko = satu admin, tanpa tambah admin).
   static const int tabBeranda = 0;
   static const int tabAdmin = 1;
   static const int tabRelawan = 2;
@@ -38,8 +41,12 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   @override
   void initState() {
     super.initState();
-    // File yang dibuka lewat "Buka dengan LOGEVA" sebelum login.
-    WidgetsBinding.instance.addPostFrameCallback((_) => BukaBerkasMasuk.lanjutkan());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // HP Induk WAJIB punya satu posko (posko tempat admin bertugas).
+      if (!PerangkatService.isAnggota) await AturPoskoHpScreen.pastikan(context);
+      // File yang dibuka lewat "Buka dengan LOGEVA" sebelum login.
+      await BukaBerkasMasuk.lanjutkan();
+    });
   }
 
   /// Satu Navigator untuk setiap tab.
@@ -108,7 +115,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                 onLogout: _logout,
               ),
             ),
-            _tab(tabAdmin, KelolaAdminScreen(onBack: _backToBeranda)),
+            _tab(tabAdmin, AkunAdminScreen(onBack: _backToBeranda)),
             _tab(tabRelawan, KelolaRelawanScreen(onBack: _backToBeranda)),
             _tab(tabData, AdminDataMenuScreen(onBack: _backToBeranda)),
             _tab(

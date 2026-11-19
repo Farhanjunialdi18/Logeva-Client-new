@@ -1,7 +1,7 @@
 // ============================================================
 // buka_berkas_masuk.dart
 // Membuka halaman yang tepat untuk file "Buka dengan LOGEVA":
-//   File Penyiapan  -> Siapkan HP ini dari HP Induk
+//   File dari HP admin (akun) -> siapkan HP relawan (Sinkronkan data?)
 //   File Sinkron    -> Sinkron Antar-HP        (perlu login)
 //   Cadangan        -> Pulihkan Cadangan       (layar awal / admin)
 //   Paket website   -> Paket Data Posko        (perlu login admin)

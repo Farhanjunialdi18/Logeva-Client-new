@@ -1,7 +1,7 @@
 // ============================================================
 // profil_admin_screen.dart
 // PROFIL ADMIN: admin yang sedang login mengubah nama, username,
-// dan email-nya sendiri. (Role & status diatur lewat Kelola Admin.)
+// dan email-nya sendiri. Satu posko = satu admin (supervisor).
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -170,8 +170,8 @@ class _ProfilAdminScreenState extends State<ProfilAdminScreen> {
                     'Status': admin.status,
                     'Dibuat': DateFormatter.date(admin.dibuatPada),
                   },
-                  note: 'Role dan status hanya bisa diubah Super Admin '
-                      'melalui menu Kelola Admin.',
+                  note: 'Satu HP posko hanya punya satu admin (supervisor). '
+                      'Nama ini tercatat sebagai Admin Posko di laporan pusat.',
                 ),
                 const SizedBox(height: 24),
 

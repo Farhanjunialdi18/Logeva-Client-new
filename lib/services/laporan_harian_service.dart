@@ -41,7 +41,7 @@ class LaporanHarianService {
     final w = WaktuWib.jamDinding(waktu);
     final hariIni = DateTime(w.year, w.month, w.day);
 
-    var posko = await PoskoRepository.withStore(s).getAll();
+    var posko = await PoskoRepository.withStore(s).getDipakai();
     if (poskoId != null) {
       posko = posko.where((p) => p.id == poskoId).toList();
     } else if (posko.any((p) => p.isBeroperasi)) {

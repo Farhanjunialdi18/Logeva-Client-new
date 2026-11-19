@@ -115,7 +115,7 @@ class PeringatanService {
     TableStore? store,
   }) async {
     final s = store ?? LocalDatabase.store;
-    final semua = await PoskoRepository.withStore(s).getAll();
+    final semua = await PoskoRepository.withStore(s).getDipakai();
     final hasil = <PeringatanPosko>[];
     for (final p in semua) {
       if (poskoId != null && p.id != poskoId) continue;

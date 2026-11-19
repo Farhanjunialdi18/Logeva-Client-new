@@ -69,7 +69,7 @@ class _AdminPengungsiScreenState extends State<AdminPengungsiScreen> {
 
   Future<void> _load() async {
     final data = await PengungsiRepository.instance.getAll();
-    final posko = await PoskoRepository.instance.getAll()
+    final posko = await PoskoRepository.instance.getDipakai()
       ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
     // Orang yang sama dari beberapa HP diputuskan supervisor di HP Induk.
     final dobel = PerangkatService.isAnggota ? 0 : await DobelService.jumlah();

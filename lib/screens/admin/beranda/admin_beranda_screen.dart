@@ -255,8 +255,8 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
           MenuCard(
             icon: Icons.manage_accounts_rounded,
             iconColor: AppColors.accentPurple,
-            title: 'KELOLA ADMIN',
-            description: 'Kelola akun administrator',
+            title: 'AKUN ADMIN POSKO',
+            description: 'Lihat & betulkan nama, kontak, password',
             onTap: () => widget.onOpenTab(_tabAdmin),
           ),
           const SizedBox(height: 12),

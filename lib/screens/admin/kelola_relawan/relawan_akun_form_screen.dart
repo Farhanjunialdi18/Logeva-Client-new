@@ -20,7 +20,8 @@ import '../../../widgets/app_text_field.dart';
 import '../../../widgets/page_header.dart';
 import '../../../widgets/pin_card.dart';
 import '../../../widgets/primary_button.dart';
-import '../posko/posko_form_screen.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_text_styles.dart';
 
 class RelawanAkunFormScreen extends StatefulWidget {
   final Relawan? existing;
@@ -32,21 +33,17 @@ class RelawanAkunFormScreen extends StatefulWidget {
 }
 
 class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
-  // Pilihan khusus di dropdown posko
-  static const String _belumDitempatkan = 'Belum ditempatkan';
-  static const String _tambahPoskoBaru = '+ Tambah posko baru';
-
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nama;
   late final TextEditingController _kontak;
 
-  List<Posko> _daftarPosko = [];
-  String _posko = _belumDitempatkan;
+  /// Relawan SELALU ditugaskan di posko HP ini (posko admin yang
+  /// membagikan akunnya). Tidak bisa dipilih.
+  Posko? _posko;
+  late final TextEditingController _poskoTeks;
   late String _status;
   String? _pin;
 
-  // Dinaikkan setiap daftar posko berubah, supaya dropdown dibuat ulang.
-  int _poskoVersion = 0;
   bool _generating = false;
   bool _saving = false;
 
@@ -59,7 +56,7 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
     _nama = TextEditingController(text: e?.nama ?? '');
     _kontak = TextEditingController(text: e?.kontak ?? '');
     _status = e?.status ?? DataOptions.statusAktif;
-    if (e != null && e.sudahDitempatkan) _posko = e.posko;
+    _poskoTeks = TextEditingController();
 
     _loadPosko();
     if (!_isEdit) {
@@ -73,23 +70,16 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
   void dispose() {
     _nama.dispose();
     _kontak.dispose();
+    _poskoTeks.dispose();
     super.dispose();
   }
 
-  Future<void> _loadPosko({String? pilih}) async {
-    final posko = await PoskoRepository.instance.getAll();
-    posko.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
-    final names = posko.map((p) => p.nama).toList();
+  Future<void> _loadPosko() async {
+    final posko = await PoskoRepository.instance.poskoHp();
     if (!mounted) return;
     setState(() {
-      _daftarPosko = posko;
-      // Saat tambah baru & posko sudah ada, pilih posko pertama otomatis.
-      if (pilih != null) {
-        _posko = pilih;
-      } else if (!_isEdit && _posko == _belumDitempatkan && names.isNotEmpty) {
-        _posko = names.first;
-      }
-      _poskoVersion++;
+      _posko = posko;
+      _poskoTeks.text = posko?.label ?? 'Posko HP ini belum diatur';
     });
   }
 
@@ -108,33 +98,18 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
     });
   }
 
-  Future<void> _pilihPosko(String? value) async {
-    if (value != _tambahPoskoBaru) {
-      setState(() => _posko = value ?? _belumDitempatkan);
-      return;
-    }
-    // Pilih "+ Tambah posko baru" -> buka form posko, lalu pilih posko barunya.
-    final baru = await Navigator.of(context).push<Posko>(
-      MaterialPageRoute(builder: (_) => const PoskoFormScreen()),
-    );
-    if (!mounted) return;
-    if (baru == null) {
-      setState(() => _poskoVersion++); // kembalikan pilihan sebelumnya
-      return;
-    }
-    await _loadPosko(pilih: baru.nama);
-  }
-
   Future<void> _simpan() async {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!_isEdit && _pin == null) return; // PIN belum selesai dibuat
+    final posko = _posko;
+    if (posko == null) {
+      AppSnackbar.show(context, 'Atur dulu posko HP ini (menu Data → Data Posko).',
+          isError: true);
+      return;
+    }
 
     setState(() => _saving = true);
-    Posko? posko;
-    for (final p in _daftarPosko) {
-      if (p.nama == _posko) posko = p;
-    }
 
     try {
       String pesan;
@@ -212,16 +187,16 @@ class _RelawanAkunFormScreenState extends State<RelawanAkunFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              AppDropdownField(
-                key: ValueKey('posko-$_poskoVersion'),
+              AppTextField(
                 label: 'Posko',
-                value: _posko,
-                items: [
-                  _belumDitempatkan,
-                  ..._daftarPosko.map((p) => p.nama),
-                  _tambahPoskoBaru,
-                ],
-                onChanged: _pilihPosko,
+                hint: '',
+                controller: _poskoTeks,
+                readOnly: true,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Relawan otomatis bertugas di posko Anda (posko HP ini).',
+                style: AppTextStyles.small(AppPalette.of(context)),
               ),
               const SizedBox(height: 16),
 

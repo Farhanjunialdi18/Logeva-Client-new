@@ -91,7 +91,7 @@ class _SinkronScreenState extends State<SinkronScreen> {
   }
 
   Future<void> _load() async {
-    final posko = await PoskoRepository.instance.getAll()
+    final posko = await PoskoRepository.instance.getDipakai()
       ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
     final riwayat = await SinkronService.riwayat();
     if (!mounted) return;

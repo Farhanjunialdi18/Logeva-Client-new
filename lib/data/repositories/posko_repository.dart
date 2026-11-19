@@ -9,6 +9,7 @@ import '../data_events.dart';
 import '../database_tables.dart';
 import '../local_database.dart';
 import '../table_store.dart';
+import 'pengaturan_repository.dart';
 
 class PoskoRepository {
   PoskoRepository._(this._store);
@@ -30,6 +31,62 @@ class PoskoRepository {
   }
 
   Future<int> count() => _store.count(_table);
+
+  // ---------------- POSKO HP INI ----------------
+  // Satu HP = satu posko. HP Induk: admin/supervisor WAJIB memilih / membuat
+  // posko tempat ia bertugas; relawan yang akunnya ia bagikan ikut posko itu.
+  // HP Anggota: posko dari File Penyiapan. Posko lain yang terlanjur ada di
+  // HP (misal data uji coba) disembunyikan, tidak dihapus.
+
+  /// Kunci pengaturan: kode posko HP Induk ini.
+  static const String kunciPoskoHp = 'posko_hp';
+
+  /// Kunci pengaturan HP Anggota (lihat PenyiapanService.kunciKodePosko).
+  static const String _kunciPoskoAnggota = 'posko_anggota';
+
+  Future<String?> _kodePoskoHp() async {
+    for (final r in await _store.getAll(DatabaseTables.pengaturan)) {
+      if (r['kunci'] == kunciPoskoHp && '${r['nilai'] ?? ''}'.isNotEmpty) {
+        return '${r['nilai']}';
+      }
+    }
+    for (final r in await _store.getAll(DatabaseTables.pengaturan)) {
+      if (r['kunci'] == _kunciPoskoAnggota && '${r['nilai'] ?? ''}'.isNotEmpty) {
+        return '${r['nilai']}';
+      }
+    }
+    return null;
+  }
+
+  /// Posko HP ini; null = belum diatur (HP kosong, atau ada beberapa posko
+  /// dan admin belum memilih).
+  Future<Posko?> poskoHp() async {
+    final semua = await getAll();
+    final kode = await _kodePoskoHp();
+    if (kode != null) {
+      for (final p in semua) {
+        if (p.kode == kode) return p;
+      }
+    }
+    return semua.length == 1 ? semua.single : null;
+  }
+
+  /// Admin memilih posko tempat ia bertugas (HP Induk).
+  Future<void> pilihPoskoHp(Posko posko) async {
+    await PengaturanRepository.withStore(_store).set(kunciPoskoHp, posko.kode);
+    DataEvents.instance.notifyChanged();
+  }
+
+  /// HP Induk WAJIB mengatur posko dulu: belum ada posko, atau ada beberapa
+  /// posko dan belum dipilih.
+  Future<bool> perluAturPoskoHp() async => await poskoHp() == null;
+
+  /// Posko yang dipakai di tampilan: hanya posko HP ini. Sebelum diatur
+  /// (atau di tes lama) = semua posko.
+  Future<List<Posko>> getDipakai() async {
+    final p = await poskoHp();
+    return p == null ? await getAll() : [p];
+  }
 
   Future<Posko?> findById(int id) async {
     for (final posko in await getAll()) {

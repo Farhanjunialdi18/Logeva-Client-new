@@ -105,6 +105,11 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
         );
         await PoskoRepository.instance.update(hasil);
       } else {
+        // Satu HP = satu posko: tidak bisa menambah posko kedua.
+        if (await PoskoRepository.instance.poskoHp() != null) {
+          throw const PoskoException('HP ini sudah punya posko. Satu HP admin '
+              'hanya untuk satu posko.');
+        }
         hasil = await PoskoRepository.instance.add(
           Posko.baru(
             nama: nama,
@@ -117,6 +122,8 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
           ),
         );
       }
+      // Posko baru = posko HP ini (tempat admin bertugas).
+      if (!_isEdit) await PoskoRepository.instance.pilihPoskoHp(hasil);
       if (!mounted) return;
       AppSnackbar.show(
         context,

@@ -183,8 +183,9 @@ class _GantiPasswordWajibScreenState extends State<GantiPasswordWajibScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Simpan password ini baik-baik. Kalau lupa, admin lain di HP '
-                  'ini (Super Admin) bisa menggantinya di menu Kelola Admin.',
+                  'Catat password ini di tempat aman. HP ini hanya punya satu '
+                  'admin (supervisor posko), jadi password yang lupa tidak bisa '
+                  'direset dari HP lain.',
                   style: AppTextStyles.small(p),
                 ),
                 ],

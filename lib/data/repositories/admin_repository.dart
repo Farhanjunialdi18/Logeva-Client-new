@@ -27,7 +27,7 @@ class AdminRepository {
   static const String _table = DatabaseTables.admin;
 
   // ---- Akun admin pertama (dibuat otomatis kalau tabel masih kosong) ----
-  // Segera ganti password ini lewat menu Kelola Admin / Settings.
+  // Wajib diganti saat login pertama (Lengkapi Akun Admin Posko).
   static const String defaultNama = 'Admin GMLS';
   static const String defaultUsername = 'admin';
   static const String defaultEmail = 'admin@gmls.id';

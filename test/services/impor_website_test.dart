@@ -1,3 +1,4 @@
+import 'dart:convert';
 // Import Paket Data Posko dari WEBSITE pusat (website -> HP Induk) dan
 // kolom ketinggian posko. Paket dibuat dengan kolom yang sama persis dengan
 // website (app/Exports/PaketPoskoExport.php): posko.csv + foto & ketinggian_mdpl,
@@ -200,6 +201,51 @@ void main() {
         (await SinkronService.buatFile(posko, store: hp)).$2, store: anggota);
     expect(await nama(anggota), {'Siti'});
     await anggota.close();
+  });
+
+  group('satu HP admin = satu posko', () {
+    test('posko HP otomatis = satu-satunya posko; beberapa posko harus dipilih', () async {
+      final repo = PoskoRepository.withStore(hp);
+      expect(await repo.perluAturPoskoHp(), isTrue, reason: 'HP kosong');
+      final a = await repo.add(Posko.baru(nama: 'Posko A', namaDesa: 'Bayah',
+          alamat: 'Jl. 1', luasLokasi: 300, latitude: '-6.9', longitude: '106.1'));
+      expect((await repo.poskoHp())?.kode, a.kode);
+      final b = await repo.add(Posko.baru(nama: 'Posko B', namaDesa: 'Sawarna',
+          alamat: 'Jl. 2', luasLokasi: 300, latitude: '-6.8', longitude: '106.2'));
+      expect(await repo.perluAturPoskoHp(), isTrue, reason: '2 posko, belum dipilih');
+      await repo.pilihPoskoHp(b);
+      expect((await repo.getDipakai()).map((p) => p.nama), ['Posko B']);
+      expect((await repo.getAll()).length, 2, reason: 'posko lain tidak dihapus');
+    });
+
+    test('HP kosong menolak paket website berisi beberapa posko', () async {
+      final dua = paketWebsite();
+      // Paket 2 posko: tambahkan baris posko kedua.
+      final arsip = ZipDecoder().decodeBytes(dua);
+      final baru = Archive();
+      for (final f in arsip) {
+        var isi = utf8.decode(f.content);
+        if (f.name == 'posko.csv') {
+          final baris = isi.trim().split('\n');
+          final kedua = baris[1]
+              .replaceAll(_kodePosko, 'f1b2c3d4-0001-4000-8000-000000000099')
+              .replaceAll('Bukit Evakuasi Pasir Gombong', 'Posko Lain');
+          isi = '${[...baris, kedua].join('\n')}\n';
+        }
+        baru.addFile(ArchiveFile.string(f.name, isi));
+      }
+      await expectLater(
+          GabungPaketService.periksaWebsite(ZipEncoder().encodeBytes(baru), store: hp),
+          throwsA(isA<GabungException>().having((e) => e.message, 'pesan', contains('1 posko'))));
+    });
+
+    test('HP dengan posko lain: paket posko berbeda tidak diambil', () async {
+      await PoskoRepository.withStore(hp).add(Posko.baru(nama: 'Posko Saya', namaDesa: 'Bayah',
+          alamat: 'Jl. 1', luasLokasi: 300, latitude: '-6.9', longitude: '106.1'));
+      await expectLater(GabungPaketService.periksaWebsite(paketWebsite(), store: hp),
+          throwsA(isA<GabungException>().having((e) => e.message, 'pesan', contains('Bukan posko HP ini'))));
+      expect((await semuaPosko()).length, 1);
+    });
   });
 
   test('impor ulang tidak dobel; data website yang lebih baru memperbarui posko', () async {

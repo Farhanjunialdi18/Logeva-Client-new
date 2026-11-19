@@ -63,7 +63,7 @@ class _KelolaRelawanScreenState extends State<KelolaRelawanScreen> {
     final relawan = await RelawanRepository.instance.getAll();
     // Pilihan filter = semua posko terdaftar + posko yang dipakai relawan.
     final posko = {
-      ...await PoskoRepository.instance.getNames(),
+      ...(await PoskoRepository.instance.getDipakai()).map((p) => p.nama),
       ...relawan.where((r) => r.sudahDitempatkan).map((r) => r.posko),
     }.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));

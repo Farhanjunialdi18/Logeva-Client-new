@@ -10,6 +10,7 @@ import '../../../data/data_events.dart';
 import '../../../data/repositories/posko_repository.dart';
 import '../../../models/posko.dart';
 import '../../../theme/app_colors.dart';
+import '../../../theme/app_text_styles.dart';
 import '../../../widgets/account_tile.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/empty_state.dart';
@@ -48,7 +49,7 @@ class _KelolaPoskoScreenState extends State<KelolaPoskoScreen> {
   }
 
   Future<void> _load() async {
-    final posko = await PoskoRepository.instance.getAll();
+    final posko = await PoskoRepository.instance.getDipakai();
     posko.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
     if (!mounted) return;
     setState(() {
@@ -117,8 +118,15 @@ class _KelolaPoskoScreenState extends State<KelolaPoskoScreen> {
 
             if (PerangkatService.isAnggota)
               const DikelolaIndukBanner()
+            // Satu HP admin = satu posko: tambah hanya kalau belum ada.
+            else if (!_loading && _semua.isEmpty)
+              PrimaryButton(text: '+ TAMBAH POSKO', onPressed: _tambah)
             else
-              PrimaryButton(text: '+ TAMBAH POSKO', onPressed: _tambah),
+              Text(
+                'Satu HP admin/supervisor untuk satu posko. Ini posko tempat Anda '
+                'bertugas; relawan yang akunnya Anda bagikan ikut posko ini.',
+                style: AppTextStyles.small(AppPalette.of(context)),
+              ),
             const SizedBox(height: 14),
 
             SearchField(

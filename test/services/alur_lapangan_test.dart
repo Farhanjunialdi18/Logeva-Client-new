@@ -179,8 +179,12 @@ void main() {
     expect(BerkasTerkunci.terkunci(berkas), isTrue);
     expect(BerkasTerkunci.buka(berkas, kataSandiPosko), isNotEmpty);
 
-    // Simpan sebagai fixture website (kalau repo website ada di sebelah).
+    // Simpan sebagai fixture website kalau belum ada, atau kalau diminta:
+    //   LOGEVA_TULIS_FIXTURE=1 flutter test test/services/alur_lapangan_test.dart
+    // (tidak ditulis ulang setiap tes supaya file di git tidak berubah terus).
     final dir = Directory('../GMLS-Logeva-abimanyun/tests/Fixtures');
-    if (dir.existsSync()) File(fixtureWebsite).writeAsBytesSync(berkas);
+    final tulis = Platform.environment['LOGEVA_TULIS_FIXTURE'] == '1' ||
+        !File(fixtureWebsite).existsSync();
+    if (dir.existsSync() && tulis) File(fixtureWebsite).writeAsBytesSync(berkas);
   });
 }

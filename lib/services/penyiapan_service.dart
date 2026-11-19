@@ -28,6 +28,7 @@ import '../data/local_database.dart';
 import '../data/repositories/admin_repository.dart';
 import '../data/repositories/barang_repository.dart';
 import '../data/repositories/pengaturan_repository.dart';
+import '../data/repositories/posko_repository.dart';
 import '../data/repositories/relawan_repository.dart';
 import '../data/table_store.dart';
 import '../models/admin.dart';
@@ -277,6 +278,13 @@ class PenyiapanService {
         k == PengaturanRepository.kunciBelumTerkirim ||
         k == PengaturanRepository.kunciTerakhirKirim ||
         k == PengaturanRepository.kunciDiterimaInduk ||
+        // Milik posko lama: posko HP ini, kata sandi posko, status HP relawan.
+        k == PoskoRepository.kunciPoskoHp ||
+        k == PengaturanRepository.kunciKataSandiBerkas ||
+        k == PengaturanRepository.kunciAkunBerubah ||
+        k == PengaturanRepository.kunciTerakhirGabung ||
+        k.startsWith(PengaturanRepository.awalanHpAnggota) ||
+        k.startsWith(PengaturanRepository.awalanDibagikan) ||
         k.startsWith(awalanRiwayatSinkron);
     final pengaturan = (await s.getAll(DatabaseTables.pengaturan))
         .where((r) => !dibuang(r['kunci'] as String? ?? ''))

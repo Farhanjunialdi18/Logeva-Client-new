@@ -177,6 +177,8 @@ void main() {
     ));
     final pengaturan = PengaturanRepository.withStore(anggota);
     final kodeHp = await pengaturan.kodePerangkat();
+    await PoskoRepository.withStore(anggota).pilihPoskoHp(poskoCoba);
+    await pengaturan.setKataSandiBerkas('SandiLama2026');
 
     final file = await buatFile();
     expect(await PenyiapanService.cekBoleh(file, store: anggota), isNotNull);
@@ -191,6 +193,11 @@ void main() {
         reason: 'admin kembali ke akun bawaan');
     expect(await PengaturanRepository.withStore(anggota).kodePerangkat(), kodeHp,
         reason: 'kode perangkat dipertahankan');
+    final setelah = PengaturanRepository.withStore(anggota);
+    expect(await setelah.get(PoskoRepository.kunciPoskoHp), isNull,
+        reason: 'posko HP lama dilupakan');
+    expect(await setelah.kataSandiBerkas(), isEmpty,
+        reason: 'kata sandi posko lama tidak terbawa ke posko baru');
 
     expect(await PenyiapanService.cekBoleh(file, store: anggota), isNull);
     await PenyiapanService.terapkan(file, store: anggota);

@@ -27,7 +27,9 @@ import '../../../utils/tanggal.dart';
 import '../../../utils/waktu_wib.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/info_card.dart';
+import '../../../widgets/kosongkan_hp.dart';
 import '../../../widgets/page_header.dart';
+import '../../../widgets/secondary_button.dart';
 
 class InfoPoskoScreen extends StatefulWidget {
   final int poskoId;
@@ -168,6 +170,23 @@ class _InfoPoskoScreenState extends State<InfoPoskoScreen> {
                   if (_rekan.isEmpty) 'Belum ada': '-',
                 },
               ),
+              // Pindah HP / berhenti bertugas: hanya kalau semua data sudah
+              // disetor ke admin (dicek di KosongkanHp).
+              if (sesi != null) ...[
+                const SizedBox(height: 20),
+                SecondaryButton(
+                  text: 'KOSONGKAN HP INI',
+                  icon: Icons.delete_forever_rounded,
+                  height: 50,
+                  onPressed: () => KosongkanHp.jalankan(context),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Untuk pindah posko / ganti HP. Hanya bisa kalau semua data '
+                  'sudah disetor ke admin. Cadangan dibuat otomatis.',
+                  style: AppTextStyles.small(p),
+                ),
+              ],
             ],
             const SizedBox(height: 24),
           ],
