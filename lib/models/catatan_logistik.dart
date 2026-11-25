@@ -3,9 +3,10 @@
 // CATATAN BARANG MASUK & KELUAR, mengikuti tabel `stok_masuks` dan
 // `stok_keluars` website, ditambah [kode] unik untuk Paket Data Posko.
 //
-// Catatan bersifat TETAP: tidak bisa diedit atau dihapus. Kalau ada
-// kesalahan, buat catatan baru (misal barang keluar tujuan "lainnya"
-// dengan keterangan "koreksi").
+// Catatan BISA DIEDIT & DIHAPUS untuk koreksi salah input. Hapus = ditandai
+// ([dihapusPada]), bukan dihapus permanen, supaya penghapusan ikut terkirim
+// ke HP lain & pusat. [diubahPada] = versi terakhir; saat digabung, versi
+// yang lebih baru yang dipakai (sama dengan data pengungsi).
 // ============================================================
 
 import '../core/data_options.dart';
@@ -25,6 +26,17 @@ abstract class CatatanLogistik {
   String get keterangan;
   String get dicatatOleh;
   DateTime get dibuatPada;
+
+  /// Versi terakhir (diedit / dihapus). Sama dengan [dibuatPada] kalau belum.
+  DateTime get diubahPada;
+
+  /// Ditandai dihapus (tidak dihitung di stok).
+  DateTime? get dihapusPada;
+
+  bool get isDihapus;
+
+  /// Pernah diedit setelah dicatat.
+  bool get pernahDiubah;
 
   bool get isMasuk;
 
@@ -52,8 +64,12 @@ class BarangMasuk implements CatatanLogistik {
   final String dicatatOleh;
   @override
   final DateTime dibuatPada;
+  @override
+  final DateTime diubahPada;
+  @override
+  final DateTime? dihapusPada;
 
-  const BarangMasuk({
+  BarangMasuk({
     this.id,
     required this.kode,
     required this.poskoId,
@@ -64,7 +80,15 @@ class BarangMasuk implements CatatanLogistik {
     this.keterangan = '',
     this.dicatatOleh = '',
     required this.dibuatPada,
-  });
+    DateTime? diubahPada,
+    this.dihapusPada,
+  }) : diubahPada = diubahPada ?? dibuatPada;
+
+  @override
+  bool get isDihapus => dihapusPada != null;
+
+  @override
+  bool get pernahDiubah => diubahPada.difference(dibuatPada).inSeconds >= 1;
 
   factory BarangMasuk.baru({
     required int poskoId,
@@ -87,6 +111,29 @@ class BarangMasuk implements CatatanLogistik {
         dibuatPada: DateTime.now(),
       );
 
+  /// Salinan hasil EDIT (kode & waktu dicatat tetap).
+  BarangMasuk ubah({
+    required int barangId,
+    required int jumlah,
+    required String sumberBantuan,
+    required DateTime tanggal,
+    required String keterangan,
+  }) =>
+      BarangMasuk(
+        id: id, kode: kode, poskoId: poskoId, barangId: barangId, jumlah: jumlah,
+        sumberBantuan: sumberBantuan, tanggal: tanggal, keterangan: keterangan,
+        dicatatOleh: dicatatOleh, dibuatPada: dibuatPada, diubahPada: DateTime.now(),
+      );
+
+  BarangMasuk tandaiDihapus() {
+    final now = DateTime.now();
+    return BarangMasuk(
+      id: id, kode: kode, poskoId: poskoId, barangId: barangId, jumlah: jumlah,
+      sumberBantuan: sumberBantuan, tanggal: tanggal, keterangan: keterangan,
+      dicatatOleh: dicatatOleh, dibuatPada: dibuatPada, diubahPada: now, dihapusPada: now,
+    );
+  }
+
   @override
   bool get isMasuk => true;
 
@@ -104,6 +151,8 @@ class BarangMasuk implements CatatanLogistik {
         'keterangan': keterangan.isEmpty ? null : keterangan,
         'dicatat_oleh': dicatatOleh.isEmpty ? null : dicatatOleh,
         'dibuat_pada': dibuatPada.toIso8601String(),
+        'diubah_pada': diubahPada.toIso8601String(),
+        'dihapus_pada': dihapusPada?.toIso8601String(),
       };
 
   factory BarangMasuk.fromMap(Map<String, Object?> map) => BarangMasuk(
@@ -118,6 +167,8 @@ class BarangMasuk implements CatatanLogistik {
         keterangan: asText(map['keterangan']),
         dicatatOleh: asText(map['dicatat_oleh']),
         dibuatPada: asDate(map['dibuat_pada']),
+        diubahPada: asDateOrNull(map['diubah_pada']),
+        dihapusPada: asDateOrNull(map['dihapus_pada']),
       );
 }
 
@@ -142,8 +193,12 @@ class BarangKeluar implements CatatanLogistik {
   final String dicatatOleh;
   @override
   final DateTime dibuatPada;
+  @override
+  final DateTime diubahPada;
+  @override
+  final DateTime? dihapusPada;
 
-  const BarangKeluar({
+  BarangKeluar({
     this.id,
     required this.kode,
     required this.poskoId,
@@ -155,7 +210,15 @@ class BarangKeluar implements CatatanLogistik {
     this.keterangan = '',
     this.dicatatOleh = '',
     required this.dibuatPada,
-  });
+    DateTime? diubahPada,
+    this.dihapusPada,
+  }) : diubahPada = diubahPada ?? dibuatPada;
+
+  @override
+  bool get isDihapus => dihapusPada != null;
+
+  @override
+  bool get pernahDiubah => diubahPada.difference(dibuatPada).inSeconds >= 1;
 
   factory BarangKeluar.baru({
     required int poskoId,
@@ -180,6 +243,30 @@ class BarangKeluar implements CatatanLogistik {
         dibuatPada: DateTime.now(),
       );
 
+  /// Salinan hasil EDIT (kode & waktu dicatat tetap).
+  BarangKeluar ubah({
+    required int barangId,
+    required int jumlah,
+    required String tujuan,
+    required String penerima,
+    required DateTime tanggal,
+    required String keterangan,
+  }) =>
+      BarangKeluar(
+        id: id, kode: kode, poskoId: poskoId, barangId: barangId, jumlah: jumlah,
+        tujuan: tujuan, penerima: penerima, tanggal: tanggal, keterangan: keterangan,
+        dicatatOleh: dicatatOleh, dibuatPada: dibuatPada, diubahPada: DateTime.now(),
+      );
+
+  BarangKeluar tandaiDihapus() {
+    final now = DateTime.now();
+    return BarangKeluar(
+      id: id, kode: kode, poskoId: poskoId, barangId: barangId, jumlah: jumlah,
+      tujuan: tujuan, penerima: penerima, tanggal: tanggal, keterangan: keterangan,
+      dicatatOleh: dicatatOleh, dibuatPada: dibuatPada, diubahPada: now, dihapusPada: now,
+    );
+  }
+
   @override
   bool get isMasuk => false;
 
@@ -201,6 +288,8 @@ class BarangKeluar implements CatatanLogistik {
         'keterangan': keterangan.isEmpty ? null : keterangan,
         'dicatat_oleh': dicatatOleh.isEmpty ? null : dicatatOleh,
         'dibuat_pada': dibuatPada.toIso8601String(),
+        'diubah_pada': diubahPada.toIso8601String(),
+        'dihapus_pada': dihapusPada?.toIso8601String(),
       };
 
   factory BarangKeluar.fromMap(Map<String, Object?> map) => BarangKeluar(
@@ -216,6 +305,8 @@ class BarangKeluar implements CatatanLogistik {
         keterangan: asText(map['keterangan']),
         dicatatOleh: asText(map['dicatat_oleh']),
         dibuatPada: asDate(map['dibuat_pada']),
+        diubahPada: asDateOrNull(map['diubah_pada']),
+        dihapusPada: asDateOrNull(map['dihapus_pada']),
       );
 }
 

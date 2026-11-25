@@ -131,15 +131,17 @@ class PaketData {
     // = semua masih di posko).
     'status_keberadaan', 'keluar_pada', 'keterangan_keluar',
   ];
+  /// diubah_pada & dihapus_pada sejak 25 Nov 2026 (koreksi catatan logistik;
+  /// versi format tetap '1': paket lama tanpa kolom ini = catatan tidak berubah).
   static const List<String> kolomMasuk = [
     'kode', 'kode_posko', 'nama_item', 'kategori', 'satuan', 'jumlah_masuk',
     'sumber_bantuan', 'tanggal_masuk', 'keterangan', 'dicatat_oleh',
-    'dibuat_pada',
+    'dibuat_pada', 'diubah_pada', 'dihapus_pada',
   ];
   static const List<String> kolomKeluar = [
     'kode', 'kode_posko', 'nama_item', 'kategori', 'satuan', 'jumlah_keluar',
     'tujuan', 'penerima', 'tanggal_keluar', 'keterangan', 'dicatat_oleh',
-    'dibuat_pada',
+    'dibuat_pada', 'diubah_pada', 'dihapus_pada',
   ];
   static const List<String> kolomStok = [
     'kode_posko', 'nama_item', 'satuan', 'jumlah_stok',
@@ -232,6 +234,8 @@ class PaketData {
             m.keterangan,
             m.dicatatOleh,
             _waktu(m.dibuatPada),
+            _waktu(m.diubahPada),
+            _waktu(m.dihapusPada),
           ],
       ]),
       'barang_keluar.csv': CsvService.encode(kolomKeluar, [
@@ -247,6 +251,8 @@ class PaketData {
             k.keterangan,
             k.dicatatOleh,
             _waktu(k.dibuatPada),
+            _waktu(k.diubahPada),
+            _waktu(k.dihapusPada),
           ],
       ]),
       'stok.csv': CsvService.encode(kolomStok, [
@@ -350,10 +356,11 @@ class PaketDataService {
               .getAll(termasukDihapus: true))
           .where((e) => ids.contains(e.poskoId))
           .toList(),
-      masuk: (await logistik.getMasuk())
+      // Termasuk yang dihapus: penghapusannya ikut terkirim.
+      masuk: (await logistik.getMasuk(termasukDihapus: true))
           .where((e) => ids.contains(e.poskoId))
           .toList(),
-      keluar: (await logistik.getKeluar())
+      keluar: (await logistik.getKeluar(termasukDihapus: true))
           .where((e) => ids.contains(e.poskoId))
           .toList(),
       barang: {

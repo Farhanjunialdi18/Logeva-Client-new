@@ -2,7 +2,7 @@
 // logistik_posko_panel.dart
 // ISI HALAMAN LOGISTIK untuk satu posko (dipakai relawan & admin):
 // ringkasan, tombol BARANG MASUK / KELUAR, tabel stok, dan catatan
-// terbaru. Stok dihitung dari catatan; catatan tidak bisa diubah.
+// terbaru. Stok dihitung dari catatan; catatan bisa diedit/dihapus (koreksi).
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -19,10 +19,13 @@ import '../../../services/kebutuhan_service.dart';
 import '../../../services/perangkat_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
+import '../../../utils/app_snackbar.dart';
 import '../../../utils/date_formatter.dart';
+import '../../../utils/pengingat_setor.dart';
 import '../../../utils/tanggal.dart';
 import '../../../widgets/app_dropdown_field.dart';
 import '../../../widgets/data_table_card.dart';
+import '../../../widgets/confirm_dialog.dart';
 import '../../../widgets/detail_sheet.dart';
 import '../../../widgets/primary_button.dart';
 import '../../../widgets/search_field.dart';
@@ -134,10 +137,10 @@ class _LogistikPoskoPanelState extends State<LogistikPoskoPanel> {
     );
   }
 
-  void _detailCatatan(CatatanLogistik c) {
+  Future<void> _detailCatatan(CatatanLogistik c) async {
     final b = _barang[c.barangId];
     final satuan = b?.satuan ?? '';
-    DetailSheet.show(
+    final aksi = await DetailSheet.show(
       context,
       title: '${c.isMasuk ? 'Masuk' : 'Keluar'}: ${b?.namaItem ?? '-'}',
       rows: {
@@ -152,10 +155,36 @@ class _LogistikPoskoPanelState extends State<LogistikPoskoPanel> {
         if (c is BarangKeluar) 'Untuk': c.tujuanLabel,
         if (c is BarangKeluar && c.penerima.isNotEmpty) 'Penerima': c.penerima,
         if (c.keterangan.isNotEmpty) 'Keterangan': c.keterangan,
+        if (c.pernahDiubah) 'Dikoreksi': DateFormatter.waktuInput(c.diubahPada),
       },
-      catatan: 'Catatan tidak bisa diubah atau dihapus. Kalau ada kesalahan, '
-          'buat catatan baru sebagai koreksi.',
     );
+    if (!mounted || aksi == null) return;
+
+    // EDIT: koreksi salah input (ikut terkirim saat setor / sinkron).
+    if (aksi == DetailAction.edit) {
+      _buka(c is BarangMasuk
+          ? BarangMasukFormScreen(posko: widget.posko, existing: c)
+          : BarangKeluarFormScreen(posko: widget.posko, existing: c as BarangKeluar));
+      return;
+    }
+
+    // HAPUS: ditandai dihapus, stok dihitung ulang.
+    final yakin = await ConfirmDialog.show(
+      context,
+      title: 'Hapus catatan ini?',
+      message: '${c.isMasuk ? 'Barang masuk' : 'Barang keluar'} '
+          '${b?.namaItem ?? '-'} ${c.jumlah} $satuan dihapus dan stok dihitung '
+          'ulang. Penghapusan ikut terkirim ke admin & pusat.',
+      confirmText: 'HAPUS',
+    );
+    if (!yakin || !mounted) return;
+    try {
+      await LogistikRepository.instance.hapus(c);
+      if (!mounted) return;
+      await PengingatSetor.setelahSimpan(context, 'Catatan dihapus, stok dihitung ulang.');
+    } on LogistikException catch (e) {
+      if (mounted) AppSnackbar.show(context, e.message, isError: true);
+    }
   }
 
   @override
@@ -240,6 +269,9 @@ class _LogistikPoskoPanelState extends State<LogistikPoskoPanel> {
         const SizedBox(height: 20),
 
         Text('CATATAN TERBARU', style: AppTextStyles.label(p)),
+        const SizedBox(height: 4),
+        Text('Ketuk catatan untuk melihat, EDIT, atau HAPUS (salah input).',
+            style: AppTextStyles.small(p)),
         const SizedBox(height: 10),
         DataTableCard(
           isLoading: _loading,

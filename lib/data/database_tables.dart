@@ -16,7 +16,7 @@ class DatabaseTables {
   DatabaseTables._();
 
   static const String databaseName = 'logeva_client.db';
-  static const int version = 11;
+  static const int version = 12;
 
   // ---- Data lapangan (versi 1) ----
   static const String pengungsi = 'pengungsi';
@@ -453,6 +453,17 @@ class DatabaseTables {
     'ALTER TABLE $posko ADD COLUMN ketinggian_mdpl REAL',
   ];
 
+  /// Versi 12: catatan barang masuk/keluar bisa DIEDIT & DIHAPUS (koreksi
+  /// salah input). diubah_pada = versi terakhir (yang lebih baru menang saat
+  /// digabung); dihapus_pada = ditandai dihapus, supaya ikut ke HP lain & pusat.
+  static final List<String> _v12 = [
+    for (final t in [barangMasuk, barangKeluar]) ...[
+      'ALTER TABLE $t ADD COLUMN diubah_pada TEXT',
+      'ALTER TABLE $t ADD COLUMN dihapus_pada TEXT',
+      'UPDATE $t SET diubah_pada = dibuat_pada WHERE diubah_pada IS NULL',
+    ],
+  ];
+
   /// Perintah untuk HP yang baru pertama kali memasang aplikasi.
   static final List<String> createStatements = [
     ..._v1,
@@ -466,6 +477,7 @@ class DatabaseTables {
     ..._v9,
     ..._v10,
     ..._v11,
+    ..._v12,
   ];
 
   /// Perintah per versi, untuk HP yang memperbarui aplikasi.
@@ -483,5 +495,6 @@ class DatabaseTables {
     9: _v9,
     10: _v10,
     11: _v11,
+    12: _v12,
   };
 }

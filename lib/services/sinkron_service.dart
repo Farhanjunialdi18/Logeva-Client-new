@@ -269,8 +269,8 @@ class SinkronService {
         pengungsi: baca('pengungsi.csv')
             .where((r) => (r['dihapus_pada'] ?? '').isEmpty)
             .length,
-        masuk: baca('barang_masuk.csv').length,
-        keluar: baca('barang_keluar.csv').length,
+        masuk: baca('barang_masuk.csv').where((r) => (r['dihapus_pada'] ?? '').isEmpty).length,
+        keluar: baca('barang_keluar.csv').where((r) => (r['dihapus_pada'] ?? '').isEmpty).length,
       );
     } catch (_) {
       return null;

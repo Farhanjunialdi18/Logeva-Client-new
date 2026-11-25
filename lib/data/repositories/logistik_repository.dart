@@ -8,7 +8,8 @@
 //    HP Anggota boleh (dengan konfirmasi), karena stoknya bisa ketinggalan
 //    dari HP lain sebelum sinkron. Stok minus lalu ditandai untuk dicek.
 //  - Tanggal tidak boleh setelah hari ini (WIB).
-//  - Catatan tidak bisa diedit/dihapus; koreksi = catatan baru.
+//  - Catatan bisa DIEDIT & DIHAPUS (koreksi salah input). Hapus = ditandai
+//    dihapus (tidak dihitung di stok) supaya ikut terkirim ke HP lain & pusat.
 // ============================================================
 
 import '../../core/data_options.dart';
@@ -44,17 +45,20 @@ class LogistikRepository {
 
   // ---------------- AMBIL CATATAN ----------------
 
-  /// Barang masuk. [poskoId] diisi = hanya posko itu.
-  Future<List<BarangMasuk>> getMasuk({int? poskoId}) async =>
+  /// Barang masuk. [poskoId] diisi = hanya posko itu. Yang ditandai dihapus
+  /// tidak ikut, kecuali [termasukDihapus] (untuk paket & penggabungan).
+  Future<List<BarangMasuk>> getMasuk({int? poskoId, bool termasukDihapus = false}) async =>
       (await _store.getAll(DatabaseTables.barangMasuk))
           .map(BarangMasuk.fromMap)
           .where((e) => poskoId == null || e.poskoId == poskoId)
+          .where((e) => termasukDihapus || !e.isDihapus)
           .toList();
 
-  Future<List<BarangKeluar>> getKeluar({int? poskoId}) async =>
+  Future<List<BarangKeluar>> getKeluar({int? poskoId, bool termasukDihapus = false}) async =>
       (await _store.getAll(DatabaseTables.barangKeluar))
           .map(BarangKeluar.fromMap)
           .where((e) => poskoId == null || e.poskoId == poskoId)
+          .where((e) => termasukDihapus || !e.isDihapus)
           .toList();
 
   /// Masuk & keluar digabung, terbaru di atas (tanggal, lalu waktu dicatat).
@@ -163,6 +167,64 @@ class LogistikRepository {
     await _store.insert(DatabaseTables.barangKeluar, data.toMap());
     await PengaturanRepository.withStore(_store).tambahPerubahanLokal();
     DataEvents.instance.notifyChanged();
+  }
+
+  // ---------------- EDIT & HAPUS (koreksi salah input) ----------------
+
+  Future<void> _simpanUbah(String tabel, CatatanLogistik c, Map<String, Object?> map) async {
+    if (c.id == null) throw const LogistikException('Catatan tidak ditemukan.');
+    await _store.update(tabel, c.id!, map);
+    await PengaturanRepository.withStore(_store).tambahPerubahanLokal();
+    DataEvents.instance.notifyChanged();
+  }
+
+  /// Simpan hasil edit barang masuk. Ditolak kalau stok barang lama jadi
+  /// minus (barang sudah terlanjur dikeluarkan), kecuali [izinkanMinus].
+  Future<void> ubahMasuk(BarangMasuk lama, BarangMasuk baru,
+      {bool izinkanMinus = false}) async {
+    _cekUmum(baru.jumlah, baru.tanggal);
+    if (baru.sumberBantuan.trim().isEmpty) {
+      throw const LogistikException('Sumber bantuan wajib diisi.');
+    }
+    if (!izinkanMinus) {
+      final stokLama = await stokBarang(lama.poskoId!, lama.barangId);
+      final sisa = stokLama - lama.jumlah + (baru.barangId == lama.barangId ? baru.jumlah : 0);
+      if (sisa < 0) {
+        throw LogistikException('Tidak bisa: sebagian barang ini sudah dikeluarkan. '
+            'Stok akan menjadi $sisa.');
+      }
+    }
+    await _simpanUbah(DatabaseTables.barangMasuk, lama, baru.toMap());
+  }
+
+  /// Simpan hasil edit barang keluar (cek stok sama dengan catat baru).
+  Future<void> ubahKeluar(BarangKeluar lama, BarangKeluar baru,
+      {required Barang barang, bool izinkanMelebihiStok = false}) async {
+    _cekUmum(baru.jumlah, baru.tanggal);
+    if (!DataOptions.tujuanKeluar.containsKey(baru.tujuan)) {
+      throw const LogistikException('Pilih untuk apa barang dikeluarkan.');
+    }
+    var sisa = await stokBarang(lama.poskoId!, baru.barangId);
+    if (baru.barangId == lama.barangId) sisa += lama.jumlah;
+    if (baru.jumlah > sisa && !izinkanMelebihiStok) {
+      throw LogistikException(sisa > 0
+          ? 'Stok tidak cukup. Sisa stok hanya $sisa ${barang.satuan}.'
+          : 'Stok barang ini sudah habis.');
+    }
+    await _simpanUbah(DatabaseTables.barangKeluar, lama, baru.toMap());
+  }
+
+  /// Hapus catatan (ditandai). Barang masuk ditolak kalau stok jadi minus.
+  Future<void> hapus(CatatanLogistik c, {bool izinkanMinus = false}) async {
+    if (c is BarangMasuk) {
+      if (!izinkanMinus && await stokBarang(c.poskoId!, c.barangId) - c.jumlah < 0) {
+        throw const LogistikException('Tidak bisa dihapus: sebagian barang ini sudah '
+            'dikeluarkan. Hapus / koreksi dulu catatan barang keluarnya.');
+      }
+      await _simpanUbah(DatabaseTables.barangMasuk, c, c.tandaiDihapus().toMap());
+    } else if (c is BarangKeluar) {
+      await _simpanUbah(DatabaseTables.barangKeluar, c, c.tandaiDihapus().toMap());
+    }
   }
 
   /// Barang yang stoknya MINUS di posko [poskoId] (keluar > masuk yang

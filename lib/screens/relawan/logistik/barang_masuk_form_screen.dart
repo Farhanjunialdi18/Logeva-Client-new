@@ -33,7 +33,10 @@ String labelBarang(Barang b) => '${b.namaItem} (${b.satuan}) · ${b.kategori}';
 class BarangMasukFormScreen extends StatefulWidget {
   final Posko posko;
 
-  const BarangMasukFormScreen({super.key, required this.posko});
+  /// Diisi = EDIT catatan ini (koreksi salah input).
+  final BarangMasuk? existing;
+
+  const BarangMasukFormScreen({super.key, required this.posko, this.existing});
 
   @override
   State<BarangMasukFormScreen> createState() => _BarangMasukFormScreenState();
@@ -50,16 +53,33 @@ class _BarangMasukFormScreenState extends State<BarangMasukFormScreen> {
   DateTime? _tanggal = WaktuWib.hariIni();
   bool _saving = false;
 
+  bool get _isEdit => widget.existing != null;
+
   @override
   void initState() {
     super.initState();
+    final e = widget.existing;
+    if (e != null) {
+      _jumlah.text = '${e.jumlah}';
+      _sumber.text = e.sumberBantuan;
+      _keterangan.text = e.keterangan;
+      _tanggal = e.tanggal;
+    }
     _load();
   }
 
   Future<void> _load() async {
     final list = await BarangRepository.instance.getAll();
     if (!mounted) return;
-    setState(() => _daftarBarang = list);
+    setState(() {
+      _daftarBarang = list;
+      final e = widget.existing;
+      if (e != null) {
+        for (final b in list) {
+          if (b.id == e.barangId) _barang = b;
+        }
+      }
+    });
   }
 
   @override
@@ -75,20 +95,35 @@ class _BarangMasukFormScreenState extends State<BarangMasukFormScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
 
-    final data = BarangMasuk.baru(
-      poskoId: widget.posko.id!,
-      barang: _barang!,
-      jumlah: int.parse(_jumlah.text.trim()),
-      sumberBantuan: _sumber.text.trim(),
-      tanggal: _tanggal!,
-      keterangan: _keterangan.text.trim(),
-      dicatatOleh: SessionService.instance.namaPencatat,
-    );
+    final jumlah = int.parse(_jumlah.text.trim());
+    final lama = widget.existing;
 
     try {
-      await LogistikRepository.instance.catatMasuk(data);
+      if (lama != null) {
+        await LogistikRepository.instance.ubahMasuk(
+          lama,
+          lama.ubah(
+            barangId: _barang!.id!,
+            jumlah: jumlah,
+            sumberBantuan: _sumber.text.trim(),
+            tanggal: _tanggal!,
+            keterangan: _keterangan.text.trim(),
+          ),
+        );
+      } else {
+        await LogistikRepository.instance.catatMasuk(BarangMasuk.baru(
+          poskoId: widget.posko.id!,
+          barang: _barang!,
+          jumlah: jumlah,
+          sumberBantuan: _sumber.text.trim(),
+          tanggal: _tanggal!,
+          keterangan: _keterangan.text.trim(),
+          dicatatOleh: SessionService.instance.namaPencatat,
+        ));
+      }
       if (!mounted) return;
-      await PengingatSetor.setelahSimpan(context, 'Barang masuk dicatat, stok bertambah.');
+      await PengingatSetor.setelahSimpan(context,
+          lama != null ? 'Catatan barang masuk dikoreksi.' : 'Barang masuk dicatat, stok bertambah.');
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
@@ -111,7 +146,7 @@ class _BarangMasukFormScreenState extends State<BarangMasukFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               PageHeader(
-                title: 'Barang Masuk',
+                title: _isEdit ? 'Edit Barang Masuk' : 'Barang Masuk',
                 subtitle: widget.posko.label,
                 onBack: () => Navigator.of(context).pop(),
               ),
@@ -176,14 +211,16 @@ class _BarangMasukFormScreenState extends State<BarangMasukFormScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Catatan tidak bisa diubah setelah disimpan. Periksa lagi '
-                'jumlahnya sebelum menyimpan.',
+                _isEdit
+                    ? 'Koreksi ikut terkirim ke admin saat setor data berikutnya.'
+                    : 'Salah input? Koreksi lewat Logistik → Catatan Terbaru → '
+                        'ketuk catatannya → EDIT.',
                 style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
               ),
               const SizedBox(height: 24),
 
               PrimaryButton(
-                text: 'SIMPAN BARANG MASUK',
+                text: _isEdit ? 'SIMPAN KOREKSI' : 'SIMPAN BARANG MASUK',
                 isLoading: _saving,
                 onPressed: _simpan,
               ),

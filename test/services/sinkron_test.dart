@@ -408,4 +408,48 @@ void main() {
         reason: 'harus dikosongkan dulu');
     await bekas.close();
   });
+
+  test('koreksi & hapus catatan logistik di HP relawan ikut ke HP admin', () async {
+    await catat(a, 'Siti', masuk: 50, keluar: 10);
+    await SinkronService.terapkan(await kirimDari(a), store: induk);
+    expect(await stokBeras(induk), 40);
+    final paketLama = await kirimDari(a);
+
+    final repo = LogistikRepository.withStore(a);
+    final masuk = (await repo.getMasuk()).single;
+    final keluar = (await repo.getKeluar()).single;
+    final beras = (await BarangRepository.withStore(a).getAll()).first;
+
+    // Pengaman stok: masuk tidak bisa dikurangi di bawah yang sudah keluar.
+    await expectLater(
+        repo.ubahMasuk(masuk, masuk.ubah(barangId: masuk.barangId, jumlah: 5,
+            sumberBantuan: 'BPBD', tanggal: masuk.tanggal, keterangan: '')),
+        throwsA(isA<LogistikException>()));
+    await expectLater(repo.hapus(masuk), throwsA(isA<LogistikException>()));
+
+    await Future<void>.delayed(const Duration(milliseconds: 1100)); // versi per detik
+    await repo.ubahMasuk(masuk, masuk.ubah(barangId: masuk.barangId, jumlah: 30,
+        sumberBantuan: 'BPBD Lebak', tanggal: masuk.tanggal, keterangan: 'salah ketik'));
+    await repo.ubahKeluar(keluar, keluar.ubah(barangId: keluar.barangId, jumlah: 12,
+        tujuan: keluar.tujuan, penerima: '', tanggal: keluar.tanggal, keterangan: ''),
+        barang: beras);
+    expect(await stokBeras(a), 18);
+
+    final hasil = await SinkronService.terapkan(await kirimDari(a), store: induk);
+    expect(hasil.ringkasanMasuk[BarisGabung.perbarui], 1);
+    expect(await stokBeras(induk), 18);
+    expect((await LogistikRepository.withStore(induk).getMasuk()).single.sumberBantuan, 'BPBD Lebak');
+
+    // Hapus catatan keluar -> stok naik lagi di kedua HP.
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    await repo.hapus((await repo.getKeluar()).single);
+    expect(await stokBeras(a), 30);
+    await SinkronService.terapkan(await kirimDari(a), store: induk);
+    expect(await stokBeras(induk), 30);
+    expect(await LogistikRepository.withStore(induk).getKeluar(), isEmpty);
+
+    // Paket lama yang terlambat diterima tidak mengembalikan versi lama.
+    await SinkronService.terapkan(paketLama, store: induk);
+    expect(await stokBeras(induk), 30);
+  });
 }

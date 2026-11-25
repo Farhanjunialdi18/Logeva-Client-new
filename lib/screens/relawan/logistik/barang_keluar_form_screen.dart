@@ -38,7 +38,10 @@ import 'barang_masuk_form_screen.dart' show labelBarang;
 class BarangKeluarFormScreen extends StatefulWidget {
   final Posko posko;
 
-  const BarangKeluarFormScreen({super.key, required this.posko});
+  /// Diisi = EDIT catatan ini (koreksi salah input).
+  final BarangKeluar? existing;
+
+  const BarangKeluarFormScreen({super.key, required this.posko, this.existing});
 
   @override
   State<BarangKeluarFormScreen> createState() => _BarangKeluarFormScreenState();
@@ -58,19 +61,46 @@ class _BarangKeluarFormScreenState extends State<BarangKeluarFormScreen> {
   bool _saving = false;
 
   bool get _anggota => PerangkatService.isAnggota;
+  bool get _isEdit => widget.existing != null;
 
   @override
   void initState() {
     super.initState();
+    final e = widget.existing;
+    if (e != null) {
+      _jumlah.text = '${e.jumlah}';
+      _penerima.text = e.penerima;
+      _keterangan.text = e.keterangan;
+      _tujuan = e.tujuan;
+      _tanggal = e.tanggal;
+    }
     _load();
   }
 
   Future<void> _load() async {
-    final stok = await LogistikRepository.instance
-        .getStok(widget.posko.id, semuaBarang: _anggota);
+    var stok = await LogistikRepository.instance
+        .getStok(widget.posko.id, semuaBarang: _anggota || _isEdit);
+    final e = widget.existing;
+    if (e != null) {
+      // Saat edit, jumlah lama catatan ini dihitung sebagai stok yang tersedia.
+      stok = [
+        for (final s in stok)
+          s.barang.id == e.barangId
+              ? StokBarang(barang: s.barang, jumlah: s.jumlah + e.jumlah,
+                  terakhirDiperbarui: s.terakhirDiperbarui)
+              : s,
+      ];
+    }
     if (!mounted) return;
     setState(() {
-      _stok = _anggota ? stok : stok.where((s) => s.jumlah > 0).toList();
+      _stok = _anggota
+          ? stok
+          : stok.where((s) => s.jumlah > 0 || s.barang.id == e?.barangId).toList();
+      if (e != null) {
+        for (final s in _stok) {
+          if (s.barang.id == e.barangId) _pilihan = s;
+        }
+      }
       _loading = false;
     });
   }
@@ -116,22 +146,41 @@ class _BarangKeluarFormScreenState extends State<BarangKeluarFormScreen> {
     setState(() => _saving = true);
 
     final barang = _pilihan!.barang;
-    final data = BarangKeluar.baru(
-      poskoId: widget.posko.id!,
-      barang: barang,
-      jumlah: jumlah,
-      tujuan: _tujuan!,
-      penerima: _penerima.text.trim(),
-      tanggal: _tanggal!,
-      keterangan: _keterangan.text.trim(),
-      dicatatOleh: SessionService.instance.namaPencatat,
-    );
+    final lama = widget.existing;
 
     try {
-      await LogistikRepository.instance.catatKeluar(data,
-          barang: barang, izinkanMelebihiStok: _anggota && melebihi);
+      if (lama != null) {
+        await LogistikRepository.instance.ubahKeluar(
+          lama,
+          lama.ubah(
+            barangId: barang.id!,
+            jumlah: jumlah,
+            tujuan: _tujuan!,
+            penerima: _penerima.text.trim(),
+            tanggal: _tanggal!,
+            keterangan: _keterangan.text.trim(),
+          ),
+          barang: barang,
+          izinkanMelebihiStok: _anggota && melebihi,
+        );
+      } else {
+        await LogistikRepository.instance.catatKeluar(
+            BarangKeluar.baru(
+              poskoId: widget.posko.id!,
+              barang: barang,
+              jumlah: jumlah,
+              tujuan: _tujuan!,
+              penerima: _penerima.text.trim(),
+              tanggal: _tanggal!,
+              keterangan: _keterangan.text.trim(),
+              dicatatOleh: SessionService.instance.namaPencatat,
+            ),
+            barang: barang,
+            izinkanMelebihiStok: _anggota && melebihi);
+      }
       if (!mounted) return;
-      await PengingatSetor.setelahSimpan(context, 'Barang keluar dicatat, stok berkurang.');
+      await PengingatSetor.setelahSimpan(context,
+          lama != null ? 'Catatan barang keluar dikoreksi.' : 'Barang keluar dicatat, stok berkurang.');
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
@@ -158,7 +207,7 @@ class _BarangKeluarFormScreenState extends State<BarangKeluarFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               PageHeader(
-                title: 'Barang Keluar',
+                title: _isEdit ? 'Edit Barang Keluar' : 'Barang Keluar',
                 subtitle: widget.posko.label,
                 onBack: () => Navigator.of(context).pop(),
               ),
@@ -250,14 +299,16 @@ class _BarangKeluarFormScreenState extends State<BarangKeluarFormScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Salah mencatat barang masuk? Koreksi dengan barang keluar '
-                  'tujuan "Lainnya" dan tulis "koreksi" di keterangan.',
+                  _isEdit
+                      ? 'Koreksi ikut terkirim ke admin saat setor data berikutnya.'
+                      : 'Salah input? Koreksi lewat Logistik → Catatan Terbaru → '
+                          'ketuk catatannya → EDIT.',
                   style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
                 ),
                 const SizedBox(height: 24),
 
                 PrimaryButton(
-                  text: 'SIMPAN BARANG KELUAR',
+                  text: _isEdit ? 'SIMPAN KOREKSI' : 'SIMPAN BARANG KELUAR',
                   isLoading: _saving,
                   onPressed: _simpan,
                 ),

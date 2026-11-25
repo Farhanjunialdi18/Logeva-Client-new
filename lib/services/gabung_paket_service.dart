@@ -333,8 +333,12 @@ class GabungPaketService {
 
     // ---- barang masuk / keluar ----
     final logistik = LogistikRepository.withStore(s);
-    final kodeMasuk = {for (final m in await logistik.getMasuk()) m.kode};
-    final kodeKeluar = {for (final k in await logistik.getKeluar()) k.kode};
+    final kodeMasuk = <String, CatatanLogistik>{
+      for (final m in await logistik.getMasuk(termasukDihapus: true)) m.kode: m,
+    };
+    final kodeKeluar = <String, CatatanLogistik>{
+      for (final k in await logistik.getKeluar(termasukDihapus: true)) k.kode: k,
+    };
     final barang = _PetaBarang(s, simpan);
     await barang.muat();
 
@@ -520,11 +524,14 @@ class GabungPaketService {
         : BarisGabung(BarisGabung.perbarui, nama, 'Data paket lebih baru');
   }
 
+  /// Catatan barang masuk/keluar dari paket. Sudah ada di HP ini: diperbarui
+  /// kalau versi paket (diubah_pada) lebih baru, termasuk penghapusan.
+  /// Paket lama tanpa kolom diubah_pada: catatan yang sudah ada tidak diubah.
   static Future<BarisGabung> _catatan(
     TableStore s,
     Map<String, String> r,
     Map<String, int> dikenal,
-    Set<String> kodeAda,
+    Map<String, CatatanLogistik> lokal,
     _PetaBarang barang,
     bool simpan, {
     required bool masuk,
@@ -532,7 +539,9 @@ class GabungPaketService {
     final nama = r['nama_item'] ?? '-';
     final kode = r['kode'] ?? '';
     if (!KodeUnik.valid(kode)) return BarisGabung(BarisGabung.error, nama, 'Kode tidak valid');
-    if (kodeAda.contains(kode)) return BarisGabung(BarisGabung.sama, nama, 'Sudah ada');
+    final lama = lokal[kode];
+    final diubahTeks = (r['diubah_pada'] ?? '').trim();
+    if (lama != null && diubahTeks.isEmpty) return BarisGabung(BarisGabung.sama, nama, 'Sudah ada');
     final poskoId = dikenal[r['kode_posko']];
     if (poskoId == null) {
       return BarisGabung(BarisGabung.lewati, nama, 'Posko tidak dikenal di HP ini');
@@ -543,32 +552,45 @@ class GabungPaketService {
     if (jumlah == null || jumlah < 1 || tanggal == null || dibuat == null) {
       return BarisGabung(BarisGabung.error, nama, 'Jumlah/tanggal tidak valid');
     }
+    final diubah = diubahTeks.isEmpty ? dibuat : WaktuWib.baca(diubahTeks);
+    if (diubah == null) return BarisGabung(BarisGabung.error, nama, 'diubah_pada tidak valid');
+    final dihapus = _waktuOpsional(r['dihapus_pada']);
     final tujuan = r['tujuan'] ?? '';
     if (!masuk && !DataOptions.tujuanKeluar.containsKey(tujuan)) {
       return BarisGabung(BarisGabung.error, nama, 'Tujuan tidak dikenali');
     }
+    if (lama != null && !_lebihBaru(diubah, lama.diubahPada)) {
+      return BarisGabung(BarisGabung.sama, nama, 'Versi di HP ini sama atau lebih baru');
+    }
 
     final b = await barang.cari(r['kategori'] ?? '', nama, r['satuan'] ?? '');
-    kodeAda.add(kode); // kode sama dua kali di satu paket -> hanya sekali
-    if (simpan) {
-      await s.insert(
-        masuk ? DatabaseTables.barangMasuk : DatabaseTables.barangKeluar,
-        masuk
-            ? BarangMasuk(
-                kode: kode, poskoId: poskoId, barangId: b.id!, jumlah: jumlah,
-                sumberBantuan: r['sumber_bantuan'] ?? '', tanggal: tanggal,
-                keterangan: r['keterangan'] ?? '', dicatatOleh: r['dicatat_oleh'] ?? '',
-                dibuatPada: dibuat,
-              ).toMap()
-            : BarangKeluar(
-                kode: kode, poskoId: poskoId, barangId: b.id!, jumlah: jumlah,
-                tujuan: tujuan, penerima: r['penerima'] ?? '', tanggal: tanggal,
-                keterangan: r['keterangan'] ?? '', dicatatOleh: r['dicatat_oleh'] ?? '',
-                dibuatPada: dibuat,
-              ).toMap(),
-      );
+    final CatatanLogistik data = masuk
+        ? BarangMasuk(
+            id: lama?.id, kode: kode, poskoId: poskoId, barangId: b.id!, jumlah: jumlah,
+            sumberBantuan: r['sumber_bantuan'] ?? '', tanggal: tanggal,
+            keterangan: r['keterangan'] ?? '', dicatatOleh: r['dicatat_oleh'] ?? '',
+            dibuatPada: dibuat, diubahPada: diubah, dihapusPada: dihapus,
+          )
+        : BarangKeluar(
+            id: lama?.id, kode: kode, poskoId: poskoId, barangId: b.id!, jumlah: jumlah,
+            tujuan: tujuan, penerima: r['penerima'] ?? '', tanggal: tanggal,
+            keterangan: r['keterangan'] ?? '', dicatatOleh: r['dicatat_oleh'] ?? '',
+            dibuatPada: dibuat, diubahPada: diubah, dihapusPada: dihapus,
+          );
+    lokal[kode] = data; // kode sama dua kali di satu paket -> hanya sekali
+    final tabel = masuk ? DatabaseTables.barangMasuk : DatabaseTables.barangKeluar;
+    final map = data is BarangMasuk ? data.toMap() : (data as BarangKeluar).toMap();
+    if (lama == null) {
+      // Yang sudah dihapus di HP asal tetap disimpan sebagai tanda.
+      if (simpan) await s.insert(tabel, map..remove('id'));
+      return dihapus == null
+          ? BarisGabung(BarisGabung.tambah, nama)
+          : BarisGabung(BarisGabung.lewati, nama, 'Sudah dihapus di HP asal');
     }
-    return BarisGabung(BarisGabung.tambah, nama);
+    if (simpan) await s.update(tabel, lama.id!, map);
+    return dihapus != null && !lama.isDihapus
+        ? BarisGabung(BarisGabung.hapus, nama, 'Dihapus di HP asal')
+        : BarisGabung(BarisGabung.perbarui, nama, 'Dikoreksi di HP asal');
   }
 }
 

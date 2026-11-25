@@ -129,6 +129,9 @@ class _PengungsiScreenState extends State<PengungsiScreen> {
           const SizedBox(height: 6),
 
           const SizedBox(height: 14),
+          Text('Ketuk nama untuk melihat, EDIT, atau HAPUS (salah input).',
+              style: AppTextStyles.small(p)),
+          const SizedBox(height: 8),
 
           DataTableCard(
             isLoading: _loading,
