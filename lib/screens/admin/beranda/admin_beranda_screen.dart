@@ -18,6 +18,7 @@ import '../../../services/ringkasan_posko_service.dart';
 import '../../../services/session_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
+import '../../../widgets/lengkapi_posko_banner.dart';
 import '../../../widgets/activity_timeline.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/app_logo.dart';
@@ -245,6 +246,9 @@ class _AdminBerandaScreenState extends State<AdminBerandaScreen> {
             ],
             const SizedBox(height: 12),
           ],
+
+          // ---- Data posko belum lengkap (misal koordinat) ----
+          const LengkapiPoskoBanner(),
 
           // ---- Pengingat HP relawan (HP Induk) ----
           PengingatHpRelawanBanner(onTap: () => widget.onOpenTab(_tabRelawan)),

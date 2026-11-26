@@ -232,7 +232,10 @@ class _PoskoFormScreenState extends State<PoskoFormScreen> {
               const SizedBox(height: 8),
               Text(
                 'Koordinat boleh dikosongkan dulu, tetapi wajib diisi '
-                'sebelum mengekspor Paket Data Posko.',
+                'sebelum mengekspor Paket Data Posko. Lengkapi kapan saja lewat '
+                'EDIT DATA POSKO. Cara mendapatkan: buka Google Maps, tekan lama '
+                'titik posko, lalu salin dua angka yang muncul (latitude, '
+                'longitude).',
                 style: AppTextStyles.small(p).copyWith(color: AppColors.sun),
               ),
               const SizedBox(height: 16),

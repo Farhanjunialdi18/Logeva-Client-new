@@ -16,6 +16,7 @@ import '../../../theme/app_text_styles.dart';
 import '../../../utils/angka.dart';
 import '../../../utils/app_snackbar.dart';
 import '../../../utils/date_formatter.dart';
+import '../../../widgets/lengkapi_posko_banner.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/confirm_dialog.dart';
 import '../../../widgets/detail_info_card.dart';
@@ -169,10 +170,8 @@ class _PoskoDetailScreenState extends State<PoskoDetailScreen> {
                 message: 'Posko tidak ditemukan.',
               )
             else ...[
-              if (!posko.lengkap) ...[
-                _PeringatanBelumLengkap(kolom: posko.dataBelumLengkap),
-                const SizedBox(height: 16),
-              ],
+              // Belum lengkap (misal latitude/longitude): tombol LENGKAPI.
+              LengkapiPoskoBanner(posko: posko),
 
               DetailInfoCard(
                 nama: posko.nama,
@@ -292,35 +291,3 @@ class _PoskoDetailScreenState extends State<PoskoDetailScreen> {
 }
 
 /// Kotak kuning: kolom yang wajib dilengkapi sebelum ekspor paket.
-class _PeringatanBelumLengkap extends StatelessWidget {
-  final List<String> kolom;
-
-  const _PeringatanBelumLengkap({required this.kolom});
-
-  @override
-  Widget build(BuildContext context) {
-    final p = AppPalette.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.sun.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.sun.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: AppColors.sun),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Lengkapi sebelum ekspor Paket Data Posko: ${kolom.join(', ')}.',
-              style: AppTextStyles.small(p).copyWith(color: p.textPrimary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

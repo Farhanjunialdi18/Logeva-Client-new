@@ -18,6 +18,7 @@ import '../../../services/paket_data_service.dart';
 import '../../../services/transfer_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
+import '../../../widgets/lengkapi_posko_banner.dart';
 import '../../../widgets/app_background.dart';
 import '../../../widgets/app_dropdown_field.dart';
 import '../../../widgets/confirm_dialog.dart';
@@ -244,6 +245,9 @@ class _PaketDataScreenState extends State<PaketDataScreen> {
                   isi: periksa.penghalang,
                 ),
                 const SizedBox(height: 14),
+                // Posko yang belum lengkap: tombol langsung ke form edit.
+                for (final posko in paket!.posko.where((p) => !p.lengkap))
+                  LengkapiPoskoBanner(posko: posko),
               ],
               if (periksa != null && periksa.peringatan.isNotEmpty) ...[
                 _Kotak(

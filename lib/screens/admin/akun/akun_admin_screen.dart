@@ -21,6 +21,8 @@ import '../../../widgets/app_background.dart';
 import '../../../widgets/info_card.dart';
 import '../../../widgets/menu_card.dart';
 import '../../../widgets/page_header.dart';
+import '../../../widgets/lengkapi_posko_banner.dart';
+import '../posko/posko_form_screen.dart';
 import '../settings/keamanan_screen.dart';
 import '../settings/profil_admin_screen.dart';
 
@@ -105,6 +107,17 @@ class _AkunAdminScreenState extends State<AkunAdminScreen> {
             },
             note: 'Relawan yang akunnya Anda bagikan otomatis bertugas di posko ini.',
           ),
+          if (_posko != null) ...[
+            const SizedBox(height: 12),
+            LengkapiPoskoBanner(posko: _posko),
+            MenuCard(
+              icon: Icons.edit_location_alt_rounded,
+              iconColor: AppColors.primary,
+              title: 'EDIT DATA POSKO',
+              description: 'Nama, desa, alamat, luas, koordinat, ketinggian',
+              onTap: () => _buka(PoskoFormScreen(existing: _posko)),
+            ),
+          ],
           const SizedBox(height: 20),
           Text('UBAH AKUN', style: AppTextStyles.label(p)),
           const SizedBox(height: 12),
